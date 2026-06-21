@@ -216,12 +216,6 @@
       },
       "url": "https://packages.unity.com"
     },
-    "com.varco3d.plugin": {
-      "version": "file:C:/Users/t3312/Downloads/varco3d-bridge-unity/unity/VARCO3DPlugin",
-      "depth": 0,
-      "source": "local",
-      "dependencies": {}
-    },
     "com.unity.modules.accessibility": {
       "version": "1.0.0",
       "depth": 0,
