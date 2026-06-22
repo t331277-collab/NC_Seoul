@@ -19,6 +19,11 @@ public class CameraMove : MonoBehaviour
 
         if (Input.GetKeyDown(KeyCode.Escape))
         {
+            if (ResourceDetailPanelManager.TryCloseOpenPanel())
+            {
+                return;
+            }
+
             if (resetCoroutine != null)
             {
                 StopCoroutine(resetCoroutine);
