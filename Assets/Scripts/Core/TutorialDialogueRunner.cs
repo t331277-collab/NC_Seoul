@@ -119,7 +119,18 @@ public class TutorialDialogueRunner : MonoBehaviour
         string finalSentence = currentNode.text.Replace("{playerName}", GameSessionData.PlayerName);
         isWaitingForVoice = true;
         
-        voiceManager.PlayDialogue(finalSentence, OnVoiceComplete);
+        string nextSentence = "";
+        string nextNodeId = "";
+        if (!string.IsNullOrEmpty(currentNode.next) && nodeDict.TryGetValue(currentNode.next, out TutorialDialogueNode nextNode))
+        {
+            if (nextNode.type != "waitForAction")
+            {
+                nextNodeId = nextNode.id;
+                nextSentence = nextNode.text.Replace("{playerName}", GameSessionData.PlayerName);
+            }
+        }
+
+        voiceManager.PlayDialogue(finalSentence, currentNode.id, nextSentence, nextNodeId, OnVoiceComplete);
     }
 
     private void OnVoiceComplete()

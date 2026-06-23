@@ -1,0 +1,13 @@
+{
+  "voiceIndex": 966,
+  "voice": "adfc2330-3a22-501b-897d-313d7472f2d8",
+  "speakerName": "Nadis (Neutral)",
+  "saasName": "Choi A-yeon",
+  "description": "female, young adult, high pitch, clear, calm",
+  "language": "korean",
+  "speed": 1.0,
+  "pitch": 1.0,
+  "n_fm_steps": 8,
+  "seed": 1945,
+  "media_type": "mp3"
+}
