@@ -75,6 +75,13 @@ public class TutorialDialogueRunner : MonoBehaviour
 
     public void StartTutorial()
     {
+        if (GameSessionData.SkipTutorial)
+        {
+            Debug.Log("[튜토리얼 스킵] 유저가 튜토리얼 스킵을 선택했습니다.");
+            inputManager.UnlockInput();
+            return;
+        }
+
         TutorialFlagStore.ClearAll();
         if (flow != null && !string.IsNullOrEmpty(flow.startNodeId))
         {
