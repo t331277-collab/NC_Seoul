@@ -1,0 +1,325 @@
+{
+  "startNodeId": "intro_001",
+  "nodes": [
+    {
+      "id": "intro_001",
+      "text": "안녕하세요, {playerName}님! 만나서 반가워요!",
+      "lockInput": true,
+      "onCompleteSetFlag": "intro_001_done",
+      "next": "intro_002"
+    },
+    {
+      "id": "intro_002",
+      "text": "{playerName}님은 지금부터 서울을 발전시켜, 세계적인 일류 도시로 만들어 나가게 될 거예요!",
+      "lockInput": true,
+      "onCompleteSetFlag": "intro_002_done",
+      "next": "intro_003"
+    },
+    {
+      "id": "intro_003",
+      "text": "그전에, 제가 게임을 플레이하는 방법부터 차근차근 알려드릴까요?",
+      "lockInput": true,
+      "onCompleteSetFlag": "intro_003_done",
+      "next": "intro_004"
+    },
+    {
+      "id": "intro_004",
+      "text": "좋아요! 그럼 저와 함께 시작해 봐요!",
+      "lockInput": true,
+      "onCompleteSetFlag": "intro_004_done",
+      "next": "intro_005"
+    },
+    {
+      "id": "intro_005",
+      "text": "우리는 1945년, 광복 직후의 경성부에서 출발해 서울을 발전시켜 나갈 거예요.",
+      "lockInput": true,
+      "onCompleteSetFlag": "intro_005_done",
+      "next": "intro_006"
+    },
+    {
+      "id": "intro_006",
+      "text": "먼저 화면 왼쪽 위에 그림들이 보이시죠?",
+      "lockInput": true,
+      "onCompleteSetFlag": "intro_006_done",
+      "next": "intro_007"
+    },
+    {
+      "id": "intro_007",
+      "text": "그중에서 가장 위에 있는 그림을 한번 눌러 보시겠어요?",
+      "lockInput": true,
+      "onCompleteSetFlag": "intro_007_done",
+      "next": "wait_money_panel"
+    },
+    {
+      "id": "wait_money_panel",
+      "type": "waitForAction",
+      "instruction": "Wait for UI/MoneyPanel click",
+      "allowedTargetPath": "UI/MoneyPanel",
+      "onActionSetFlag": "money_panel_clicked",
+      "next": "money_001"
+    },
+    {
+      "id": "money_001",
+      "text": "잘하셨어요!",
+      "lockInput": true,
+      "onCompleteSetFlag": "money_001_done",
+      "next": "money_002"
+    },
+    {
+      "id": "money_002",
+      "text": "이 수치는 서울이 보유하고 있는 **자금**을 나타내요.",
+      "lockInput": true,
+      "onCompleteSetFlag": "money_002_done",
+      "next": "money_003"
+    },
+    {
+      "id": "money_003",
+      "text": "자금은 건물을 짓거나 관리할 때, 그리고 새로운 정책을 시행할 때 꼭 필요한 자원이랍니다!",
+      "lockInput": true,
+      "onCompleteSetFlag": "money_003_done",
+      "next": "money_004"
+    },
+    {
+      "id": "money_004",
+      "text": "인구와 기술력이 높아질수록 해마다 얻을 수 있는 자금도 늘어나니, 꾸준히 관리하는 것이 중요하겠죠?",
+      "lockInput": true,
+      "onCompleteSetFlag": "money_004_done",
+      "next": "money_005"
+    },
+    {
+      "id": "money_005",
+      "text": "참고로 그림 속에는 세종대왕님과 혼천의, 자격루가 그려져 있어요!",
+      "lockInput": true,
+      "onCompleteSetFlag": "money_005_done",
+      "next": "money_006"
+    },
+    {
+      "id": "money_006",
+      "text": "이제 `ESC` 키를 눌러 창을 닫고, 바로 아래에 있는 그림을 눌러 보세요!",
+      "lockInput": true,
+      "onCompleteSetFlag": "money_006_done",
+      "next": "wait_science_panel"
+    },
+    {
+      "id": "wait_science_panel",
+      "type": "waitForAction",
+      "instruction": "Wait for UI/SciecnePanel click",
+      "allowedTargetPath": "UI/SciecnePanel",
+      "onActionSetFlag": "science_panel_clicked",
+      "next": "science_001"
+    },
+    {
+      "id": "science_001",
+      "text": "이 그림에는 혼천의와 자격루가 그려져 있어요!",
+      "lockInput": true,
+      "onCompleteSetFlag": "science_001_done",
+      "next": "science_002"
+    },
+    {
+      "id": "science_002",
+      "text": "조선 시대에 만들어진 발명품으로, 우리 선조들의 뛰어난 지혜와 기술이 담겨 있답니다.",
+      "lockInput": true,
+      "onCompleteSetFlag": "science_002_done",
+      "next": "science_003"
+    },
+    {
+      "id": "science_003",
+      "text": "그래서 이 그림은 서울의 **기술력**을 나타내요!",
+      "lockInput": true,
+      "onCompleteSetFlag": "science_003_done",
+      "next": "science_004"
+    },
+    {
+      "id": "science_004",
+      "text": "교육기관을 건설하고 기술에 투자하면, 기술력이 턴마다 조금씩 상승해요.",
+      "lockInput": true,
+      "onCompleteSetFlag": "science_004_done",
+      "next": "science_005"
+    },
+    {
+      "id": "science_005",
+      "text": "기술력이 높아질수록 시행할 수 있는 정책과 건설할 수 있는 건물도 더욱 다양해진답니다!",
+      "lockInput": true,
+      "onCompleteSetFlag": "science_005_done",
+      "next": "science_006"
+    },
+    {
+      "id": "science_006",
+      "text": "그럼 다시 창을 닫고, 그 아래에 있는 그림도 눌러 볼까요?",
+      "lockInput": true,
+      "onCompleteSetFlag": "science_006_done",
+      "next": "wait_convenience_panel"
+    },
+    {
+      "id": "wait_convenience_panel",
+      "type": "waitForAction",
+      "instruction": "Wait for UI/ConveniencePanel click",
+      "allowedTargetPath": "UI/ConveniencePanel",
+      "onActionSetFlag": "convenience_panel_clicked",
+      "next": "convenience_001"
+    },
+    {
+      "id": "convenience_001",
+      "text": "이 그림은 김홍도의 그림 속에서 신나게 춤추는 아이의 모습을 가져온 거예요!",
+      "lockInput": true,
+      "onCompleteSetFlag": "convenience_001_done",
+      "next": "convenience_002"
+    },
+    {
+      "id": "convenience_002",
+      "text": "이 수치는 시민들이 {playerName}님의 도시 운영에 얼마나 만족하고 있는지를 나타내는 **시민 만족도**랍니다!",
+      "lockInput": true,
+      "onCompleteSetFlag": "convenience_002_done",
+      "next": "convenience_003"
+    },
+    {
+      "id": "convenience_003",
+      "text": "별로 만족해 보이지 않는다고요?",
+      "lockInput": true,
+      "onCompleteSetFlag": "convenience_003_done",
+      "next": "convenience_004"
+    },
+    {
+      "id": "convenience_004",
+      "text": "에이, 자세히 한번 보세요!",
+      "lockInput": true,
+      "onCompleteSetFlag": "convenience_004_done",
+      "next": "convenience_005"
+    },
+    {
+      "id": "convenience_005",
+      "text": "얼마나 즐거우면 저렇게 신나게 춤을 추고 있겠어요?",
+      "lockInput": true,
+      "onCompleteSetFlag": "convenience_005_done",
+      "next": "convenience_006"
+    },
+    {
+      "id": "convenience_006",
+      "text": "시민 만족도가 높으면 긍정적인 상황이 더 자주 일어나고, 반대로 너무 낮아지면 도시 운영에 여러 문제가 생길 수 있어요.",
+      "lockInput": true,
+      "onCompleteSetFlag": "convenience_006_done",
+      "next": "convenience_007"
+    },
+    {
+      "id": "convenience_007",
+      "text": "오른쪽에 표시된 기준을 참고하면서 시민들이 행복한 도시를 만들어 주세요!",
+      "lockInput": true,
+      "onCompleteSetFlag": "convenience_007_done",
+      "next": "wait_people_panel"
+    },
+    {
+      "id": "wait_people_panel",
+      "type": "waitForAction",
+      "instruction": "Wait for UI/PeoplePanel click",
+      "allowedTargetPath": "UI/PeoplePanel",
+      "onActionSetFlag": "people_panel_clicked",
+      "next": "people_001"
+    },
+    {
+      "id": "people_001",
+      "text": "이번 그림은 무엇을 뜻하는지 아시겠나요?",
+      "lockInput": true,
+      "onCompleteSetFlag": "people_001_done",
+      "next": "people_002"
+    },
+    {
+      "id": "people_002",
+      "text": "음…… 힌트를 드릴게요!",
+      "lockInput": true,
+      "onCompleteSetFlag": "people_002_done",
+      "next": "people_003"
+    },
+    {
+      "id": "people_003",
+      "text": "그림 속에 사람들이 아주 많이 모여 있죠?",
+      "lockInput": true,
+      "onCompleteSetFlag": "people_003_done",
+      "next": "people_004"
+    },
+    {
+      "id": "people_004",
+      "text": "정답은 바로 서울의 **인구수**예요!",
+      "lockInput": true,
+      "onCompleteSetFlag": "people_004_done",
+      "next": "people_005"
+    },
+    {
+      "id": "people_005",
+      "text": "인구가 늘어날수록 해마다 얻을 수 있는 돈도 증가해서 도시를 발전시키는 데 큰 도움이 된답니다.",
+      "lockInput": true,
+      "onCompleteSetFlag": "people_005_done",
+      "next": "people_006"
+    },
+    {
+      "id": "people_006",
+      "text": "하지만 인구가 너무 빠르게 늘어나면 시민들이 살 수 있는 주택도 더 많이 필요해져요.",
+      "lockInput": true,
+      "onCompleteSetFlag": "people_006_done",
+      "next": "people_007"
+    },
+    {
+      "id": "people_007",
+      "text": "그러니 인구와 주택의 균형을 꼭 기억해 주세요!",
+      "lockInput": true,
+      "onCompleteSetFlag": "people_007_done",
+      "next": "wait_love_panel"
+    },
+    {
+      "id": "wait_love_panel",
+      "type": "waitForAction",
+      "instruction": "Wait for UI/LovePanel click",
+      "allowedTargetPath": "UI/LovePanel",
+      "onActionSetFlag": "love_panel_clicked",
+      "next": "love_001"
+    },
+    {
+      "id": "love_001",
+      "text": "마지막 그림은…… 뭔지 맞춰보세요! 두구두구두구!",
+      "lockInput": true,
+      "onCompleteSetFlag": "love_001_done",
+      "next": "love_002"
+    },
+    {
+      "id": "love_002",
+      "text": "바로 **오륜행실도**입니다!",
+      "lockInput": true,
+      "onCompleteSetFlag": "love_002_done",
+      "next": "love_003"
+    },
+    {
+      "id": "love_003",
+      "text": "오륜행실도는 옛사람들이 지켜야 할 도리와 서로를 아끼는 마음을 그림과 이야기로 알려 주던 책이에요.",
+      "lockInput": true,
+      "onCompleteSetFlag": "love_003_done",
+      "next": "love_004"
+    },
+    {
+      "id": "love_004",
+      "text": "이 그림은 도시 안에 존재하는 **사랑과 선한 마음**을 나타낸답니다!",
+      "lockInput": true,
+      "onCompleteSetFlag": "love_004_done",
+      "next": "love_005"
+    },
+    {
+      "id": "love_005",
+      "text": "이 수치는 일반적인 도시 운영에는 직접적인 영향을 주지 않지만, 특별한 행동과 선택을 통해 높일 수 있어요.",
+      "lockInput": true,
+      "onCompleteSetFlag": "love_005_done",
+      "next": "love_006"
+    },
+    {
+      "id": "love_006",
+      "text": "사랑과 배려가 가득한 도시라면…… 당연히 더욱 멋진 도시가 되겠죠?",
+      "lockInput": true,
+      "onCompleteSetFlag": "love_006_done",
+      "next": "love_007"
+    },
+    {
+      "id": "love_007",
+      "text": "자 그럼 이제 저와 함께 서울을 멋진 도시로 만들어봐요!",
+      "lockInput": true,
+      "onCompleteSetFlag": "love_007_done",
+      "next": null
+    }
+  ]
+}

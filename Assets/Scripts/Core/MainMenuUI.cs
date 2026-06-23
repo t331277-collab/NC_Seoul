@@ -151,6 +151,7 @@ public class MainMenuUI : MonoBehaviour
             return;
         }
 
+        GameSessionData.PlayerName = nameInput.text.Trim();
         SceneManager.LoadScene(InGameSceneName);
     }
 
