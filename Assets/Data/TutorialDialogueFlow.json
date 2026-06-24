@@ -20,6 +20,11 @@
       "text": "그전에, 제가 게임을 플레이하는 방법부터 차근차근 알려드릴까요?",
       "lockInput": true,
       "onCompleteSetFlag": "intro_003_done",
+      "next": "prompt_skip"
+    },
+    {
+      "id": "prompt_skip",
+      "type": "showSkipPrompt",
       "next": "intro_004"
     },
     {
