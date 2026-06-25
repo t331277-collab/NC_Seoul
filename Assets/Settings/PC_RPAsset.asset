@@ -42,8 +42,8 @@ MonoBehaviour:
   m_SupportProbeVolumeScenarioBlending: 0
   m_ProbeVolumeSHBands: 1
   m_MainLightRenderingMode: 1
-  m_MainLightShadowsSupported: 1
-  m_MainLightShadowmapResolution: 2048
+  m_MainLightShadowsSupported: 0
+  m_MainLightShadowmapResolution: 4096
   m_AdditionalLightsRenderingMode: 1
   m_AdditionalLightsPerObjectLimit: 4
   m_AdditionalLightShadowsSupported: 1
@@ -86,7 +86,7 @@ MonoBehaviour:
   m_GPUResidentDrawerMode: 0
   m_SmallMeshScreenPercentage: 0
   m_GPUResidentDrawerEnableOcclusionCullingInCameras: 0
-  m_ShadowType: 1
+  m_ShadowType: 2
   m_LocalShadowsSupported: 0
   m_LocalShadowsAtlasResolution: 256
   m_MaxPixelLights: 0
@@ -126,7 +126,7 @@ MonoBehaviour:
   m_PrefilterSoftShadowsQualityLow: 0
   m_PrefilterSoftShadowsQualityMedium: 0
   m_PrefilterSoftShadowsQualityHigh: 0
-  m_PrefilterSoftShadows: 0
+  m_PrefilterSoftShadows: 1
   m_PrefilterScreenCoord: 1
   m_PrefilterScreenSpaceIrradiance: 0
   m_PrefilterNativeRenderPass: 1

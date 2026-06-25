@@ -29,7 +29,14 @@ public class WaterUVScroll : MonoBehaviour
             Time.time * normalScrollY
         );
 
-        waterMaterial.SetTextureOffset("_BaseMap", baseOffset);
-        waterMaterial.SetTextureOffset("_BumpMap", normalOffset);
+        if (waterMaterial.HasProperty("_BaseMap"))
+        {
+            waterMaterial.SetTextureOffset("_BaseMap", baseOffset);
+        }
+        
+        if (waterMaterial.HasProperty("_BumpMap"))
+        {
+            waterMaterial.SetTextureOffset("_BumpMap", normalOffset);
+        }
     }
 }
