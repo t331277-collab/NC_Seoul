@@ -8,21 +8,33 @@ using UnityEngine.UI;
 public class DistrictStructurePanelManager : MonoBehaviour
 {
     private const string StructPrefix = "Stru";
+    private const string IgnoredStructName = "Stru_CommonSense";
 
     [SerializeField] private string structDefinitionRelativePath = "Data/StructDefinition.csv";
     [SerializeField] private float itemSpacing = 235f;
 
     private readonly Dictionary<string, StructDefinition> structDefinitions = new Dictionary<string, StructDefinition>();
+    private readonly Dictionary<string, Sprite> loadedSprites = new Dictionary<string, Sprite>();
     private readonly List<GameObject> currentItems = new List<GameObject>();
+    private readonly List<GameObject> buildableItems = new List<GameObject>();
 
     private GameObject currentPanel;
     private GameObject buildablePanel;
+    private GameObject descriptionPanel;
     private TextMeshProUGUI currentNameText;
     private TextMeshProUGUI buildableNameText;
+    private TextMeshProUGUI descriptionNameText;
+    private TextMeshProUGUI descriptionText;
+    private TextMeshProUGUI descriptionStartYearText;
+    private Image descriptionImage;
     private RectTransform currentContainer;
+    private RectTransform buildableContainer;
     private RectTransform currentTemplate;
+    private RectTransform buildableTemplate;
     private RectTransform currentContent;
+    private RectTransform buildableContent;
     private ScrollRect currentScrollRect;
+    private ScrollRect buildableScrollRect;
     private string selectedRegionDisplayName;
     private Transform selectedRegionTransform;
 
@@ -32,6 +44,7 @@ public class DistrictStructurePanelManager : MonoBehaviour
         LoadStructDefinitions();
         SetPanelActive(currentPanel, false);
         SetPanelActive(buildablePanel, false);
+        SetPanelActive(descriptionPanel, false);
     }
 
     public void ShowRegion(string regionDisplayName, Transform regionTransform)
@@ -43,7 +56,9 @@ public class DistrictStructurePanelManager : MonoBehaviour
 
         SetPanelActive(currentPanel, false);
         SetPanelActive(buildablePanel, false);
-        ClearCurrentItems();
+        SetPanelActive(descriptionPanel, false);
+        ClearItems(currentItems);
+        ClearItems(buildableItems);
     }
 
     public void ShowCurrentStructures()
@@ -54,24 +69,25 @@ public class DistrictStructurePanelManager : MonoBehaviour
         }
 
         BindSceneObjects();
+        LoadStructDefinitions();
         SetPanelActive(currentPanel, true);
         SetText(currentNameText, selectedRegionDisplayName + " (현재 건물목록)");
-        PopulateCurrentStructures(selectedRegionTransform);
+        PopulateStructures(selectedRegionTransform, true, true, currentTemplate, currentContent, currentContainer, currentScrollRect, currentItems);
     }
 
     public void ShowBuildableStructures()
     {
-        if (string.IsNullOrEmpty(selectedRegionDisplayName))
+        if (selectedRegionTransform == null || string.IsNullOrEmpty(selectedRegionDisplayName))
         {
             return;
         }
 
         BindSceneObjects();
+        LoadStructDefinitions();
         SetPanelActive(buildablePanel, true);
         SetText(buildableNameText, selectedRegionDisplayName + " (건축 가능 건물)");
+        PopulateStructures(selectedRegionTransform, false, false, buildableTemplate, buildableContent, buildableContainer, buildableScrollRect, buildableItems);
     }
-
-
 
     private void BindSceneObjects()
     {
@@ -88,6 +104,7 @@ public class DistrictStructurePanelManager : MonoBehaviour
         Transform currentPanelTransform = uiRoot.Find("CurStruc");
         Transform buildablePanelTransform = uiRoot.Find("CanBuildStruc");
         Transform terrainPanelTransform = uiRoot.Find("TerrainPanel");
+        Transform descriptionPanelTransform = uiRoot.Find("DescStruc");
 
         if (currentPanelTransform != null)
         {
@@ -97,7 +114,11 @@ public class DistrictStructurePanelManager : MonoBehaviour
             if (currentContainer != null)
             {
                 currentTemplate = currentContainer.Find("StrTemplate") as RectTransform;
-                PrepareScrollContent();
+                if (currentTemplate != null && currentTemplate.GetComponent<Button>() == null)
+                {
+                    currentTemplate.gameObject.AddComponent<Button>();
+                }
+                PrepareScrollContent(currentContainer, ref currentContent, ref currentScrollRect);
             }
 
             BindCloseButton(currentPanelTransform);
@@ -107,7 +128,28 @@ public class DistrictStructurePanelManager : MonoBehaviour
         {
             buildablePanel = buildablePanelTransform.gameObject;
             buildableNameText = FindText(buildablePanelTransform, "Name");
+            buildableContainer = buildablePanelTransform.Find("StruContainer") as RectTransform;
+            if (buildableContainer != null)
+            {
+                buildableTemplate = buildableContainer.Find("StrTemplate") as RectTransform;
+                PrepareScrollContent(buildableContainer, ref buildableContent, ref buildableScrollRect);
+            }
+
             BindCloseButton(buildablePanelTransform);
+        }
+
+        if (descriptionPanelTransform != null)
+        {
+            descriptionPanel = descriptionPanelTransform.gameObject;
+            descriptionNameText = FindText(descriptionPanelTransform, "StucName");
+            descriptionText = FindText(descriptionPanelTransform, "Desc");
+            descriptionStartYearText = FindText(descriptionPanelTransform, "StartYear");
+            Transform imageTransform = descriptionPanelTransform.Find("Image");
+            if (imageTransform != null)
+            {
+                descriptionImage = imageTransform.GetComponent<Image>();
+            }
+            BindDescriptionCloseButton(descriptionPanelTransform);
         }
 
         if (terrainPanelTransform != null)
@@ -117,43 +159,43 @@ public class DistrictStructurePanelManager : MonoBehaviour
         }
     }
 
-    private void PrepareScrollContent()
+    private void PrepareScrollContent(RectTransform container, ref RectTransform content, ref ScrollRect scrollRect)
     {
-        if (currentContainer == null)
+        if (container == null)
         {
             return;
         }
 
-        currentContent = currentContainer.Find("Content") as RectTransform;
-        if (currentContent == null)
+        content = container.Find("Content") as RectTransform;
+        if (content == null)
         {
             GameObject contentObject = new GameObject("Content", typeof(RectTransform));
-            currentContent = contentObject.GetComponent<RectTransform>();
-            currentContent.SetParent(currentContainer, false);
-            currentContent.anchorMin = new Vector2(0.5f, 0.5f);
-            currentContent.anchorMax = new Vector2(0.5f, 0.5f);
-            currentContent.pivot = new Vector2(0.5f, 0.5f);
-            currentContent.anchoredPosition = Vector2.zero;
-            currentContent.sizeDelta = currentContainer.sizeDelta;
+            content = contentObject.GetComponent<RectTransform>();
+            content.SetParent(container, false);
+            content.anchorMin = new Vector2(0.5f, 0.5f);
+            content.anchorMax = new Vector2(0.5f, 0.5f);
+            content.pivot = new Vector2(0.5f, 0.5f);
+            content.anchoredPosition = Vector2.zero;
+            content.sizeDelta = container.sizeDelta;
         }
 
-        if (currentContainer.GetComponent<Mask>() == null)
+        if (container.GetComponent<Mask>() == null)
         {
-            Mask mask = currentContainer.gameObject.AddComponent<Mask>();
+            Mask mask = container.gameObject.AddComponent<Mask>();
             mask.showMaskGraphic = true;
         }
 
-        currentScrollRect = currentContainer.GetComponent<ScrollRect>();
-        if (currentScrollRect == null)
+        scrollRect = container.GetComponent<ScrollRect>();
+        if (scrollRect == null)
         {
-            currentScrollRect = currentContainer.gameObject.AddComponent<ScrollRect>();
+            scrollRect = container.gameObject.AddComponent<ScrollRect>();
         }
 
-        currentScrollRect.content = currentContent;
-        currentScrollRect.viewport = currentContainer;
-        currentScrollRect.horizontal = false;
-        currentScrollRect.vertical = true;
-        currentScrollRect.movementType = ScrollRect.MovementType.Clamped;
+        scrollRect.content = content;
+        scrollRect.viewport = container;
+        scrollRect.horizontal = false;
+        scrollRect.vertical = true;
+        scrollRect.movementType = ScrollRect.MovementType.Clamped;
     }
 
     private void BindCloseButton(Transform panelTransform)
@@ -183,6 +225,24 @@ public class DistrictStructurePanelManager : MonoBehaviour
         }
     }
 
+    private void BindDescriptionCloseButton(Transform panelTransform)
+    {
+        Transform closeTransform = panelTransform.Find("CloseBtn");
+        if (closeTransform == null)
+        {
+            return;
+        }
+
+        Button closeButton = closeTransform.GetComponent<Button>();
+        if (closeButton == null)
+        {
+            return;
+        }
+
+        closeButton.onClick.RemoveListener(CloseDescriptionPanel);
+        closeButton.onClick.AddListener(CloseDescriptionPanel);
+    }
+
     private void BindTerrainButton(Transform terrainPanelTransform, string childName, UnityEngine.Events.UnityAction action)
     {
         Transform buttonTransform = terrainPanelTransform.Find(childName);
@@ -200,7 +260,6 @@ public class DistrictStructurePanelManager : MonoBehaviour
         button.onClick.RemoveListener(action);
         button.onClick.AddListener(action);
     }
-
 
     private void LoadStructDefinitions()
     {
@@ -221,14 +280,16 @@ public class DistrictStructurePanelManager : MonoBehaviour
                 continue;
             }
 
-            string[] columns = lines[i].Split(',');
-            if (columns.Length < 7)
+            string[] columns = ParseCsvLine(lines[i]);
+            if (columns.Length < 11)
             {
+                Debug.LogWarning($"StructDefinition.csv line {i + 1} has fewer than 11 columns.");
                 continue;
             }
 
             if (!TryParseDefinition(columns, out StructDefinition definition))
             {
+                Debug.LogWarning($"StructDefinition.csv line {i + 1} could not be parsed.");
                 continue;
             }
 
@@ -236,33 +297,93 @@ public class DistrictStructurePanelManager : MonoBehaviour
         }
     }
 
+    private string[] ParseCsvLine(string line)
+    {
+        List<string> fields = new List<string>();
+        StringBuilder field = new StringBuilder();
+        bool inQuotes = false;
+
+        for (int i = 0; i < line.Length; i++)
+        {
+            char c = line[i];
+            if (c == '"')
+            {
+                if (inQuotes && i + 1 < line.Length && line[i + 1] == '"')
+                {
+                    field.Append('"');
+                    i++;
+                }
+                else
+                {
+                    inQuotes = !inQuotes;
+                }
+            }
+            else if (c == ',' && !inQuotes)
+            {
+                fields.Add(field.ToString());
+                field.Length = 0;
+            }
+            else
+            {
+                field.Append(c);
+            }
+        }
+
+        fields.Add(field.ToString());
+        return fields.ToArray();
+    }
+
+    private string NormalizeCsvText(string value)
+    {
+        return string.IsNullOrEmpty(value) ? value : value.Replace("\\n", "\n");
+    }
+
     private bool TryParseDefinition(string[] columns, out StructDefinition definition)
     {
         definition = default;
 
         string structName = columns[0].Trim();
+        string displayName = columns[1].Trim();
+        string imagePath = columns[8].Trim();
+        string description = NormalizeCsvText(columns[9].Trim());
+        string startYear = NormalizeCsvText(columns[10].Trim());
         if (string.IsNullOrEmpty(structName))
         {
             return false;
         }
 
-        if (!int.TryParse(columns[2].Trim(), out int money) ||
-            !int.TryParse(columns[3].Trim(), out int people) ||
-            !int.TryParse(columns[4].Trim(), out int science) ||
-            !int.TryParse(columns[6].Trim(), out int convenience))
+        if (string.IsNullOrEmpty(displayName))
+        {
+            displayName = structName;
+        }
+
+        if (string.IsNullOrEmpty(description))
+        {
+            description = "설명글 추가 예정";
+        }
+
+        if (string.IsNullOrEmpty(startYear))
+        {
+            startYear = "임시";
+        }
+
+        if (!int.TryParse(columns[3].Trim(), out int money) ||
+            !int.TryParse(columns[4].Trim(), out int people) ||
+            !int.TryParse(columns[5].Trim(), out int science) ||
+            !int.TryParse(columns[7].Trim(), out int convenience))
         {
             return false;
         }
 
-        definition = new StructDefinition(structName, people, money, convenience, science);
+        definition = new StructDefinition(structName, displayName, people, money, convenience, science, imagePath, description, startYear);
         return true;
     }
 
-    private void PopulateCurrentStructures(Transform regionTransform)
+    private void PopulateStructures(Transform regionTransform, bool showActive, bool enableDescription, RectTransform template, RectTransform content, RectTransform container, ScrollRect scrollRect, List<GameObject> items)
     {
-        ClearCurrentItems();
+        ClearItems(items);
 
-        if (regionTransform == null || currentTemplate == null || currentContent == null)
+        if (regionTransform == null || template == null || content == null)
         {
             return;
         }
@@ -270,7 +391,7 @@ public class DistrictStructurePanelManager : MonoBehaviour
         int itemIndex = 0;
         foreach (Transform child in regionTransform)
         {
-            if (!child.name.StartsWith(StructPrefix, System.StringComparison.Ordinal))
+            if (!IsStructureTarget(child, showActive))
             {
                 continue;
             }
@@ -278,71 +399,158 @@ public class DistrictStructurePanelManager : MonoBehaviour
             StructDefinition definition;
             if (!structDefinitions.TryGetValue(child.name, out definition))
             {
-                definition = new StructDefinition(child.name, 0, 0, 0, 0);
+                definition = new StructDefinition(child.name, child.name, 0, 0, 0, 0, string.Empty, "설명글 추가 예정", "임시");
                 Debug.LogWarning($"{child.name} was found in the scene but not in StructDefinition.csv.");
             }
 
-            CreateCurrentItem(definition, itemIndex);
+            CreateItem(definition, enableDescription, template, content, items, itemIndex);
             itemIndex += 1;
         }
 
-        UpdateContentSize(itemIndex);
+        UpdateContentSize(itemIndex, template, content, container, scrollRect);
     }
 
-    private void CreateCurrentItem(StructDefinition definition, int itemIndex)
+    private bool IsStructureTarget(Transform target, bool showActive)
     {
-        GameObject itemObject = Instantiate(currentTemplate.gameObject, currentContent);
-        itemObject.name = currentTemplate.name + "_" + itemIndex;
+        if (target == null || target.name == IgnoredStructName)
+        {
+            return false;
+        }
+
+        if (!target.name.StartsWith(StructPrefix, System.StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        return target.gameObject.activeInHierarchy == showActive;
+    }
+
+    private void CreateItem(StructDefinition definition, bool enableDescription, RectTransform template, RectTransform content, List<GameObject> items, int itemIndex)
+    {
+        GameObject itemObject = Instantiate(template.gameObject, content);
+        itemObject.name = template.name + "_" + itemIndex;
         itemObject.SetActive(true);
 
         RectTransform itemRect = itemObject.GetComponent<RectTransform>();
         if (itemRect != null)
         {
-            itemRect.anchoredPosition = new Vector2(currentTemplate.anchoredPosition.x, currentTemplate.anchoredPosition.y - itemSpacing * itemIndex);
+            itemRect.anchoredPosition = new Vector2(template.anchoredPosition.x, template.anchoredPosition.y - itemSpacing * itemIndex);
         }
 
-        SetText(FindText(itemObject.transform, "StruName"), definition.Name);
+        SetText(FindText(itemObject.transform, "StruName"), definition.DisplayName);
         SetText(FindText(itemObject.transform, "People"), definition.People.ToString());
         SetText(FindText(itemObject.transform, "Money"), definition.Money.ToString());
         SetText(FindText(itemObject.transform, "Convenience"), definition.Convenience.ToString());
         SetText(FindText(itemObject.transform, "Science"), definition.Science.ToString());
 
-        currentItems.Add(itemObject);
+        if (enableDescription)
+        {
+            BindItemButton(itemObject, definition);
+        }
+
+        items.Add(itemObject);
     }
 
-    private void UpdateContentSize(int itemCount)
+    private void BindItemButton(GameObject itemObject, StructDefinition definition)
     {
-        if (currentContent == null || currentContainer == null)
+        Button button = itemObject.GetComponent<Button>();
+        if (button == null)
+        {
+            button = itemObject.AddComponent<Button>();
+        }
+
+        StructDefinition selectedDefinition = definition;
+        button.onClick.RemoveAllListeners();
+        button.onClick.AddListener(() => ShowStructureDescription(selectedDefinition));
+    }
+
+    private void ShowStructureDescription(StructDefinition definition)
+    {
+        BindSceneObjects();
+
+        SetPanelActive(currentPanel, false);
+        SetPanelActive(descriptionPanel, true);
+        SetText(descriptionNameText, definition.DisplayName);
+        SetText(descriptionText, definition.Description);
+        SetText(descriptionStartYearText, definition.StartYear);
+
+        if (descriptionImage == null)
         {
             return;
         }
 
-        float height = currentContainer.sizeDelta.y;
-        if (itemCount > 0)
-        {
-            height = Mathf.Max(height, currentTemplate.rect.height + itemSpacing * (itemCount - 1) + 40f);
-        }
-
-        currentContent.sizeDelta = new Vector2(currentContainer.sizeDelta.x, height);
-        currentContent.anchoredPosition = Vector2.zero;
-
-        if (currentScrollRect != null)
-        {
-            currentScrollRect.verticalNormalizedPosition = 1f;
-        }
+        Sprite sprite = LoadSprite(definition.ImagePath);
+        descriptionImage.sprite = sprite;
+        descriptionImage.enabled = sprite != null;
     }
 
-    private void ClearCurrentItems()
+    private Sprite LoadSprite(string assetPath)
     {
-        for (int i = currentItems.Count - 1; i >= 0; i--)
+        if (string.IsNullOrWhiteSpace(assetPath))
         {
-            if (currentItems[i] != null)
+            return null;
+        }
+
+        if (loadedSprites.TryGetValue(assetPath, out Sprite cachedSprite))
+        {
+            return cachedSprite;
+        }
+
+        Sprite sprite = null;
+#if UNITY_EDITOR
+        sprite = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>(assetPath);
+#endif
+        if (sprite == null)
+        {
+            string fullPath = Path.Combine(Directory.GetParent(Application.dataPath).FullName, assetPath);
+            if (File.Exists(fullPath))
             {
-                Destroy(currentItems[i]);
+                byte[] imageBytes = File.ReadAllBytes(fullPath);
+                Texture2D texture = new Texture2D(2, 2);
+                if (texture.LoadImage(imageBytes))
+                {
+                    sprite = Sprite.Create(texture, new Rect(0f, 0f, texture.width, texture.height), new Vector2(0.5f, 0.5f));
+                }
             }
         }
 
-        currentItems.Clear();
+        loadedSprites[assetPath] = sprite;
+        return sprite;
+    }
+
+    private void UpdateContentSize(int itemCount, RectTransform template, RectTransform content, RectTransform container, ScrollRect scrollRect)
+    {
+        if (content == null || container == null || template == null)
+        {
+            return;
+        }
+
+        float height = container.sizeDelta.y;
+        if (itemCount > 0)
+        {
+            height = Mathf.Max(height, template.rect.height + itemSpacing * (itemCount - 1) + 40f);
+        }
+
+        content.sizeDelta = new Vector2(container.sizeDelta.x, height);
+        content.anchoredPosition = Vector2.zero;
+
+        if (scrollRect != null)
+        {
+            scrollRect.verticalNormalizedPosition = 1f;
+        }
+    }
+
+    private void ClearItems(List<GameObject> items)
+    {
+        for (int i = items.Count - 1; i >= 0; i--)
+        {
+            if (items[i] != null)
+            {
+                Destroy(items[i]);
+            }
+        }
+
+        items.Clear();
     }
 
     private TextMeshProUGUI FindText(Transform parent, string childName)
@@ -387,21 +595,35 @@ public class DistrictStructurePanelManager : MonoBehaviour
         SetPanelActive(buildablePanel, false);
     }
 
+    private void CloseDescriptionPanel()
+    {
+        SetPanelActive(descriptionPanel, false);
+        SetPanelActive(currentPanel, true);
+    }
+
     private struct StructDefinition
     {
         public readonly string Name;
+        public readonly string DisplayName;
         public readonly int People;
         public readonly int Money;
         public readonly int Convenience;
         public readonly int Science;
+        public readonly string ImagePath;
+        public readonly string Description;
+        public readonly string StartYear;
 
-        public StructDefinition(string name, int people, int money, int convenience, int science)
+        public StructDefinition(string name, string displayName, int people, int money, int convenience, int science, string imagePath, string description, string startYear)
         {
             Name = name;
+            DisplayName = displayName;
             People = people;
             Money = money;
             Convenience = convenience;
             Science = science;
+            ImagePath = imagePath;
+            Description = description;
+            StartYear = startYear;
         }
     }
 }

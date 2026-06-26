@@ -10,6 +10,7 @@ public class StructStageManager : MonoBehaviour
 {
     private const int InitialYear = 1945;
     private const string StructPrefix = "Stru";
+    private const string IgnoredStructName = "Stru_CommonSense";
 
     [SerializeField] private string structDefinitionRelativePath = "Data/StructDefinition.csv";
 
@@ -132,7 +133,7 @@ public class StructStageManager : MonoBehaviour
             }
 
             string[] columns = line.Split(',');
-            if (columns.Length < 7)
+            if (columns.Length < 8)
             {
                 continue;
             }
@@ -156,12 +157,12 @@ public class StructStageManager : MonoBehaviour
             return false;
         }
 
-        if (!int.TryParse(columns[1].Trim(), out int unlockYear) ||
-            !int.TryParse(columns[2].Trim(), out int moneyProduction) ||
-            !int.TryParse(columns[3].Trim(), out int peopleIncrease) ||
-            !int.TryParse(columns[4].Trim(), out int scienceIncrease) ||
-            !int.TryParse(columns[5].Trim(), out int loveIncrease) ||
-            !int.TryParse(columns[6].Trim(), out int convenienceIncrease))
+        if (!int.TryParse(columns[2].Trim(), out int unlockYear) ||
+            !int.TryParse(columns[3].Trim(), out int moneyProduction) ||
+            !int.TryParse(columns[4].Trim(), out int peopleIncrease) ||
+            !int.TryParse(columns[5].Trim(), out int scienceIncrease) ||
+            !int.TryParse(columns[6].Trim(), out int loveIncrease) ||
+            !int.TryParse(columns[7].Trim(), out int convenienceIncrease))
         {
             return false;
         }
@@ -210,7 +211,7 @@ public class StructStageManager : MonoBehaviour
     {
         foreach (Transform child in parent)
         {
-            if (child.gameObject.activeInHierarchy && child.name.StartsWith(StructPrefix, StringComparison.Ordinal))
+            if (child.gameObject.activeInHierarchy && child.name != IgnoredStructName && child.name.StartsWith(StructPrefix, StringComparison.Ordinal))
             {
                 AddStructValue(child.name, ref total);
             }
