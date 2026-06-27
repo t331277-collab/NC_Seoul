@@ -19,6 +19,11 @@ public class CameraMove : MonoBehaviour
 
         if (Input.GetKeyDown(KeyCode.Escape))
         {
+            if (StructureActionManager.TryCloseOpenBuildPanel())
+            {
+                return;
+            }
+
             if (ResourceDetailPanelManager.TryCloseOpenPanel())
             {
                 return;

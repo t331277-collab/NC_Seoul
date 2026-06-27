@@ -9,12 +9,11 @@ using UnityEngine.UI;
 public class StructStageManager : MonoBehaviour
 {
     private const int InitialYear = 1945;
-    private const string StructPrefix = "Stru";
     private const string IgnoredStructName = "Stru_CommonSense";
 
     [SerializeField] private string structDefinitionRelativePath = "Data/StructDefinition.csv";
 
-    private readonly Dictionary<string, StructDefinition> structDefinitions = new Dictionary<string, StructDefinition>();
+    private readonly Dictionary<string, StructDefinitionData> structDefinitions = new Dictionary<string, StructDefinitionData>();
 
     private Transform seoulRoot;
     private Button nextYearButton;
@@ -32,6 +31,12 @@ public class StructStageManager : MonoBehaviour
     private int people;
     private int love;
     private StatValues pendingValues;
+
+    public event Action<int> BeforeYearProduction;
+
+    public int CurrentYear { get { return currentYear; } }
+    public int Money { get { return money; } }
+    public int Science { get { return science; } }
 
     private void Awake()
     {
@@ -59,16 +64,49 @@ public class StructStageManager : MonoBehaviour
 
     public void ApplyNextYear()
     {
+        currentYear += 1;
+
+        if (BeforeYearProduction != null)
+        {
+            BeforeYearProduction(currentYear);
+        }
+
+        RefreshPendingValues();
+
         money += pendingValues.Money;
         convenience += pendingValues.Convenience;
         science += pendingValues.Science;
         people += pendingValues.People;
         love += pendingValues.Love;
-        currentYear += 1;
 
         UpdateMainTexts();
         UpdateYearText();
         RefreshPendingValues();
+    }
+
+    public bool TrySpendMoney(int amount)
+    {
+        if (amount < 0 || money < amount)
+        {
+            return false;
+        }
+
+        money -= amount;
+        UpdateMainTexts();
+        RefreshPendingValues();
+        return true;
+    }
+
+    public StatValues GetStructureProduction(string structureKey)
+    {
+        StatValues values = default;
+        if (string.IsNullOrEmpty(structureKey))
+        {
+            return values;
+        }
+
+        AddStructValue(structureKey, ref values);
+        return values;
     }
 
     private void BindSceneObjects()
@@ -116,59 +154,11 @@ public class StructStageManager : MonoBehaviour
     {
         structDefinitions.Clear();
 
-        string csvPath = Path.Combine(Application.dataPath, structDefinitionRelativePath);
-        if (!File.Exists(csvPath))
+        Dictionary<string, StructDefinitionData> loadedDefinitions = StructDefinitionDatabase.Load(structDefinitionRelativePath);
+        foreach (KeyValuePair<string, StructDefinitionData> pair in loadedDefinitions)
         {
-            Debug.LogWarning($"StructDefinition.csv was not found at {csvPath}.");
-            return;
+            structDefinitions[pair.Key] = pair.Value;
         }
-
-        string[] lines = File.ReadAllLines(csvPath, Encoding.UTF8);
-        for (int i = 1; i < lines.Length; i++)
-        {
-            string line = lines[i];
-            if (string.IsNullOrWhiteSpace(line))
-            {
-                continue;
-            }
-
-            string[] columns = line.Split(',');
-            if (columns.Length < 8)
-            {
-                continue;
-            }
-
-            if (!TryParseDefinition(columns, out StructDefinition definition))
-            {
-                continue;
-            }
-
-            structDefinitions[definition.Name] = definition;
-        }
-    }
-
-    private bool TryParseDefinition(string[] columns, out StructDefinition definition)
-    {
-        definition = default;
-
-        string structName = columns[0].Trim();
-        if (string.IsNullOrEmpty(structName))
-        {
-            return false;
-        }
-
-        if (!int.TryParse(columns[2].Trim(), out int unlockYear) ||
-            !int.TryParse(columns[3].Trim(), out int moneyProduction) ||
-            !int.TryParse(columns[4].Trim(), out int peopleIncrease) ||
-            !int.TryParse(columns[5].Trim(), out int scienceIncrease) ||
-            !int.TryParse(columns[6].Trim(), out int loveIncrease) ||
-            !int.TryParse(columns[7].Trim(), out int convenienceIncrease))
-        {
-            return false;
-        }
-
-        definition = new StructDefinition(structName, unlockYear, moneyProduction, peopleIncrease, scienceIncrease, loveIncrease, convenienceIncrease);
-        return true;
     }
 
     private void InitializeValues()
@@ -184,7 +174,7 @@ public class StructStageManager : MonoBehaviour
         UpdateYearText();
     }
 
-    private void RefreshPendingValues()
+    public void RefreshPendingValues()
     {
         pendingValues = CalculateCurrentStructValues();
 
@@ -211,7 +201,7 @@ public class StructStageManager : MonoBehaviour
     {
         foreach (Transform child in parent)
         {
-            if (child.gameObject.activeInHierarchy && child.name != IgnoredStructName && child.name.StartsWith(StructPrefix, StringComparison.Ordinal))
+            if (IsProductionTarget(child))
             {
                 AddStructValue(child.name, ref total);
             }
@@ -220,9 +210,17 @@ public class StructStageManager : MonoBehaviour
         }
     }
 
+    private bool IsProductionTarget(Transform target)
+    {
+        return target != null &&
+               target.gameObject.activeInHierarchy &&
+               target.name != IgnoredStructName &&
+               structDefinitions.ContainsKey(target.name);
+    }
+
     private void AddStructValue(string structName, ref StatValues total)
     {
-        if (!structDefinitions.TryGetValue(structName, out StructDefinition definition))
+        if (!structDefinitions.TryGetValue(structName, out StructDefinitionData definition))
         {
             return;
         }
@@ -323,35 +321,13 @@ public class StructStageManager : MonoBehaviour
         return value.ToString();
     }
 
-    private struct StructDefinition
-    {
-        public readonly string Name;
-        public readonly int UnlockYear;
-        public readonly int MoneyProduction;
-        public readonly int PeopleIncrease;
-        public readonly int ScienceIncrease;
-        public readonly int LoveIncrease;
-        public readonly int ConvenienceIncrease;
-
-        public StructDefinition(string name, int unlockYear, int moneyProduction, int peopleIncrease, int scienceIncrease, int loveIncrease, int convenienceIncrease)
-        {
-            Name = name;
-            UnlockYear = unlockYear;
-            MoneyProduction = moneyProduction;
-            PeopleIncrease = peopleIncrease;
-            ScienceIncrease = scienceIncrease;
-            LoveIncrease = loveIncrease;
-            ConvenienceIncrease = convenienceIncrease;
-        }
-    }
-
     private struct StatTexts
     {
         public TextMeshProUGUI MainText;
         public TextMeshProUGUI PlusMinusText;
     }
 
-    private struct StatValues
+    public struct StatValues
     {
         public int Money;
         public int Convenience;
