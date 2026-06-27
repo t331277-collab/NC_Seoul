@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -10,6 +11,11 @@ public class StructStageManager : MonoBehaviour
 {
     private const int InitialYear = 1945;
     private const string IgnoredStructName = "Stru_CommonSense";
+    private const float CutSceneFadeDuration = 1f;
+    private const float CutSceneTextInterval = 0.5f;
+    private const float CutSceneHoldDuration = 1f;
+
+
 
     [SerializeField] private string structDefinitionRelativePath = "Data/StructDefinition.csv";
 
@@ -24,6 +30,12 @@ public class StructStageManager : MonoBehaviour
     private StatTexts peopleTexts;
     private StatTexts loveTexts;
     private StructureActionManager structureActionManager;
+    private Transform cutSceneRoot;
+    private CanvasGroup cutSceneCanvasGroup;
+    private TextMeshProUGUI cutSceneYearNumberText;
+    private TextMeshProUGUI cutSceneYearNameText;
+    private bool isYearTransitionPlaying;
+
 
     private int currentYear = InitialYear;
     private int money;
@@ -48,21 +60,105 @@ public class StructStageManager : MonoBehaviour
         RefreshPendingValues();
     }
 
-    private void OnEnable()
+private void OnEnable()
     {
         if (nextYearButton != null)
         {
-            nextYearButton.onClick.AddListener(ApplyNextYear);
+            nextYearButton.onClick.AddListener(HandleNextYearButtonClicked);
         }
     }
 
-    private void OnDisable()
+private void OnDisable()
     {
         if (nextYearButton != null)
         {
-            nextYearButton.onClick.RemoveListener(ApplyNextYear);
+            nextYearButton.onClick.RemoveListener(HandleNextYearButtonClicked);
         }
     }
+
+private void HandleNextYearButtonClicked()
+    {
+        if (isYearTransitionPlaying)
+        {
+            return;
+        }
+
+        if (cutSceneRoot == null || cutSceneCanvasGroup == null || cutSceneYearNumberText == null || cutSceneYearNameText == null)
+        {
+            ApplyNextYear();
+            return;
+        }
+
+        StartCoroutine(PlayNextYearTransition());
+    }
+
+private IEnumerator PlayNextYearTransition()
+    {
+        isYearTransitionPlaying = true;
+        if (nextYearButton != null)
+        {
+            nextYearButton.interactable = false;
+        }
+
+        cutSceneRoot.gameObject.SetActive(true);
+        cutSceneYearNumberText.gameObject.SetActive(false);
+        cutSceneYearNameText.gameObject.SetActive(false);
+        SetCutSceneAlpha(0f);
+
+        yield return FadeCutScene(0f, 1f, CutSceneFadeDuration);
+
+        ApplyNextYear();
+        SetText(cutSceneYearNumberText, currentYear.ToString());
+        SetText(cutSceneYearNameText, GetGanjiYearName(currentYear));
+
+        yield return new WaitForSeconds(CutSceneTextInterval);
+        cutSceneYearNumberText.gameObject.SetActive(true);
+
+        yield return new WaitForSeconds(CutSceneTextInterval);
+        cutSceneYearNameText.gameObject.SetActive(true);
+
+        yield return new WaitForSeconds(CutSceneHoldDuration);
+        yield return FadeCutScene(1f, 0f, CutSceneFadeDuration);
+
+        cutSceneRoot.gameObject.SetActive(false);
+        if (nextYearButton != null)
+        {
+            nextYearButton.interactable = true;
+        }
+        isYearTransitionPlaying = false;
+    }
+
+    private IEnumerator FadeCutScene(float fromAlpha, float toAlpha, float duration)
+    {
+        float elapsed = 0f;
+        SetCutSceneAlpha(fromAlpha);
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float progress = Mathf.Clamp01(elapsed / duration);
+            SetCutSceneAlpha(Mathf.Lerp(fromAlpha, toAlpha, progress));
+            yield return null;
+        }
+
+        SetCutSceneAlpha(toAlpha);
+    }
+
+    private void SetCutSceneAlpha(float alpha)
+    {
+        if (cutSceneCanvasGroup != null)
+        {
+            cutSceneCanvasGroup.alpha = alpha;
+        }
+    }
+
+    private string GetGanjiYearName(int year)
+    {
+        string[] heavenlyStems = { "경", "신", "임", "계", "갑", "을", "병", "정", "무", "기" };
+        string[] earthlyBranches = { "신", "유", "술", "해", "자", "축", "인", "묘", "진", "사", "오", "미" };
+        return heavenlyStems[year % heavenlyStems.Length] + earthlyBranches[year % earthlyBranches.Length] + "년";
+    }
+
 
     public void ApplyNextYear()
     {
@@ -158,6 +254,22 @@ public class StructStageManager : MonoBehaviour
         {
             nextYearButton = nextYearTransform.GetComponent<Button>();
         }
+
+        Transform cutSceneTransform = uiRoot.Find("CutScene");
+        if (cutSceneTransform != null)
+        {
+            cutSceneRoot = cutSceneTransform;
+            cutSceneCanvasGroup = cutSceneRoot.GetComponent<CanvasGroup>();
+            if (cutSceneCanvasGroup == null)
+            {
+                cutSceneCanvasGroup = cutSceneRoot.gameObject.AddComponent<CanvasGroup>();
+            }
+            cutSceneYearNumberText = FindText(cutSceneRoot, "TXT_NUM");
+            cutSceneYearNameText = FindText(cutSceneRoot, "TXT_YEAR");
+            SetCutSceneAlpha(0f);
+            cutSceneRoot.gameObject.SetActive(false);
+        }
+
     }
 
     private void LoadStructDefinitions()
