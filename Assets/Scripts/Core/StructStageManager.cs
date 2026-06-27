@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -23,6 +23,7 @@ public class StructStageManager : MonoBehaviour
     private StatTexts scienceTexts;
     private StatTexts peopleTexts;
     private StatTexts loveTexts;
+    private StructureActionManager structureActionManager;
 
     private int currentYear = InitialYear;
     private int money;
@@ -33,6 +34,7 @@ public class StructStageManager : MonoBehaviour
     private StatValues pendingValues;
 
     public event Action<int> BeforeYearProduction;
+    public event Action<int> AfterYearProduction;
 
     public int CurrentYear { get { return currentYear; } }
     public int Money { get { return money; } }
@@ -81,6 +83,12 @@ public class StructStageManager : MonoBehaviour
 
         UpdateMainTexts();
         UpdateYearText();
+
+        if (AfterYearProduction != null)
+        {
+            AfterYearProduction(currentYear);
+        }
+
         RefreshPendingValues();
     }
 
@@ -136,6 +144,8 @@ public class StructStageManager : MonoBehaviour
         }
         peopleTexts = FindStatTexts(uiRoot, "PeoplePanel");
         loveTexts = FindStatTexts(uiRoot, "LovePanel");
+
+        structureActionManager = uiRoot.GetComponent<StructureActionManager>();
 
         Transform yearPanel = uiRoot.Find("YearPanel");
         if (yearPanel != null)
@@ -203,7 +213,7 @@ public class StructStageManager : MonoBehaviour
         {
             if (IsProductionTarget(child))
             {
-                AddStructValue(child.name, ref total);
+                AddStructValue(child, ref total);
             }
 
             AddStructValues(child, ref total);
@@ -216,6 +226,29 @@ public class StructStageManager : MonoBehaviour
                target.gameObject.activeInHierarchy &&
                target.name != IgnoredStructName &&
                structDefinitions.ContainsKey(target.name);
+    }
+
+    private void AddStructValue(Transform target, ref StatValues total)
+    {
+        if (target == null)
+        {
+            return;
+        }
+
+        StatValues values = default;
+        AddStructValue(target.name, ref values);
+
+        float multiplier;
+        if (structureActionManager != null && structureActionManager.TryGetProductionMultiplier(target.gameObject, out multiplier))
+        {
+            values = Multiply(values, multiplier);
+        }
+
+        total.Money += values.Money;
+        total.People += values.People;
+        total.Science += values.Science;
+        total.Love += values.Love;
+        total.Convenience += values.Convenience;
     }
 
     private void AddStructValue(string structName, ref StatValues total)
@@ -235,6 +268,16 @@ public class StructStageManager : MonoBehaviour
         total.Science += definition.ScienceIncrease;
         total.Love += definition.LoveIncrease;
         total.Convenience += definition.ConvenienceIncrease;
+    }
+
+    private StatValues Multiply(StatValues values, float multiplier)
+    {
+        values.Money = Mathf.CeilToInt(values.Money * multiplier);
+        values.People = Mathf.CeilToInt(values.People * multiplier);
+        values.Science = Mathf.CeilToInt(values.Science * multiplier);
+        values.Love = Mathf.CeilToInt(values.Love * multiplier);
+        values.Convenience = Mathf.CeilToInt(values.Convenience * multiplier);
+        return values;
     }
 
     private void UpdateMainTexts()

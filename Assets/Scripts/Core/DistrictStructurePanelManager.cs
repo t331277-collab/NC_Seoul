@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using TMPro;
@@ -401,6 +401,7 @@ public class DistrictStructurePanelManager : MonoBehaviour
         if (enableDescription)
         {
             BindItemButton(itemObject, definition);
+            BindStructureActionButtons(itemObject, structureTransform == null ? null : structureTransform.gameObject, definition, displayName);
         }
         else
         {
@@ -421,6 +422,44 @@ public class DistrictStructurePanelManager : MonoBehaviour
         StructDefinitionData selectedDefinition = definition;
         button.onClick.RemoveAllListeners();
         button.onClick.AddListener(() => ShowStructureDescription(selectedDefinition));
+    }
+
+    private void BindStructureActionButtons(GameObject itemObject, GameObject targetObject, StructDefinitionData definition, string displayName)
+    {
+        BindStructureActionButton(itemObject, "InvestBtn", targetObject, definition, displayName, StructureActionButtonBinding.ActionKind.Invest);
+        BindStructureActionButton(itemObject, "RepairBtn", targetObject, definition, displayName, StructureActionButtonBinding.ActionKind.Repair);
+        BindStructureActionButton(itemObject, "DestructBtn", targetObject, definition, displayName, StructureActionButtonBinding.ActionKind.Destroy);
+    }
+
+    private void BindStructureActionButton(GameObject itemObject, string buttonName, GameObject targetObject, StructDefinitionData definition, string displayName, StructureActionButtonBinding.ActionKind actionKind)
+    {
+        if (itemObject == null)
+        {
+            return;
+        }
+
+        Transform buttonTransform = itemObject.transform.Find(buttonName);
+        if (buttonTransform == null)
+        {
+            return;
+        }
+
+        Button button = buttonTransform.GetComponent<Button>();
+        if (button == null)
+        {
+            return;
+        }
+
+        StructureActionButtonBinding binding = buttonTransform.GetComponent<StructureActionButtonBinding>();
+        if (binding == null)
+        {
+            binding = buttonTransform.gameObject.AddComponent<StructureActionButtonBinding>();
+        }
+
+        BindSceneObjects();
+        binding.Configure(structureActionManager, this, targetObject, definition, displayName, actionKind);
+        button.onClick.RemoveAllListeners();
+        button.onClick.AddListener(binding.InvokeAction);
     }
 
     private void BindBuildButton(GameObject itemObject, GameObject targetObject, StructDefinitionData definition, string displayName)
