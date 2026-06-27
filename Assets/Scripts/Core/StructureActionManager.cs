@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -15,17 +15,27 @@ public class StructureActionManager : MonoBehaviour
     private const string DefaultDestroyNameTemplate = "{StruName} 철거 명령서";
     private const string DefaultDestroyDescTemplate = "{InvestAmont} 만큼의 금액으로 해당 건물의 철거를 명령함";
     private const float InvestMultiplier = 1.5f;
+    private static readonly int[] HouseInvestmentCosts = new int[] { 80, 100, 125, 155, 195, 250, 320, 410, 520, 660, 850, 1100, 1400, 1800, 2300 };
+    private const string VisualRootName = "VisualRoot";
 
     [SerializeField] private string buildPanelPath = "CanBuildStruc/BuildPanel";
     [SerializeField] private string investPanelPath = "CurStruc/StruContainer/InvestPanel";
     [SerializeField] private string repairPanelPath = "CurStruc/StruContainer/RepairPanel";
     [SerializeField] private string destroyPanelPath = "CurStruc/StruContainer/DestPanel";
+    [SerializeField] private GameObject newHousePrefab;
+    [SerializeField] private GameObject apartmentPrefab;
+    [SerializeField] private GameObject newSchoolPrefab;
+    [SerializeField] private GameObject newDistrictPrefab;
+    [SerializeField] private GameObject newUniversityPrefab;
+    [SerializeField] private GameObject structingPrefab;
 
     private readonly List<ConstructionJob> constructionJobs = new List<ConstructionJob>();
+    private readonly List<DemolitionJob> demolitionJobs = new List<DemolitionJob>();
     private readonly List<InvestmentBoost> investmentBoosts = new List<InvestmentBoost>();
 
     private StructStageManager stageManager;
     private DistrictStructurePanelManager districtPanelManager;
+    private ToastPopupManager toastPopupManager;
     private GameObject buildPanel;
     private TextMeshProUGUI buildNameText;
     private TextMeshProUGUI buildDescText;
@@ -34,6 +44,7 @@ public class StructureActionManager : MonoBehaviour
     private GameObject investPanel;
     private TextMeshProUGUI investNameText;
     private TextMeshProUGUI investDescText;
+    private TextMeshProUGUI investExplainText;
     private Button confirmInvestButton;
     private GameObject repairPanel;
     private TextMeshProUGUI repairNameText;
@@ -60,6 +71,7 @@ public class StructureActionManager : MonoBehaviour
     private void Awake()
     {
         BindSceneObjects();
+        BindInvestmentVisualPrefabs();
         SetBuildPanelActive(false);
         SetStructureActionPanelsActive(false);
     }
@@ -68,6 +80,7 @@ public class StructureActionManager : MonoBehaviour
     {
         activeInstance = this;
         BindSceneObjects();
+        BindInvestmentVisualPrefabs();
         if (stageManager != null)
         {
             stageManager.BeforeYearProduction -= HandleBeforeYearProduction;
@@ -158,7 +171,10 @@ public class StructureActionManager : MonoBehaviour
     public void OpenInvestPanel(GameObject targetObject, StructDefinitionData definition, string displayName, DistrictStructurePanelManager sourcePanelManager)
     {
         BindSceneObjects();
-        OpenStructureActionPanel(targetObject, definition, displayName, sourcePanelManager, investPanel, investNameText, investDescText, investNameTemplate, investDescTemplate, definition == null ? 0 : definition.InvestCost, confirmInvestButton, ConfirmInvest);
+        StructureInvestmentState investmentState = GetInvestmentState(targetObject);
+        int investCost = definition == null ? 0 : GetInvestmentCost(definition, investmentState);
+        OpenStructureActionPanel(targetObject, definition, displayName, sourcePanelManager, investPanel, investNameText, investDescText, investNameTemplate, investDescTemplate, investCost, confirmInvestButton, ConfirmInvest);
+        SetInvestmentExplainText(targetObject, definition);
     }
 
     public void OpenRepairPanel(GameObject targetObject, StructDefinitionData definition, string displayName, DistrictStructurePanelManager sourcePanelManager)
@@ -171,6 +187,62 @@ public class StructureActionManager : MonoBehaviour
     {
         BindSceneObjects();
         OpenStructureActionPanel(targetObject, definition, displayName, sourcePanelManager, destroyPanel, destroyNameText, destroyDescText, destroyNameTemplate, destroyDescTemplate, definition == null ? 0 : definition.DestroyCost, confirmDestroyButton, ConfirmDestroy);
+    }
+
+    public string GetInvestmentStatusText(GameObject targetObject, StructDefinitionData definition)
+    {
+        StructureInvestmentState investmentState = GetInvestmentState(targetObject);
+        if (investmentState == null || investmentState.StructureKind == StructureInvestmentState.InvestmentStructureKind.Unknown)
+        {
+            return string.Empty;
+        }
+
+        int maxSuccess = Mathf.Max(0, investmentState.maxSuccessfulInvestments);
+        if (maxSuccess <= 0)
+        {
+            return string.Empty;
+        }
+
+        string status = "강화 " + investmentState.successfulInvestmentCount + "/" + maxSuccess;
+        if (investmentState.hasPendingInvestment)
+        {
+            return status + " | 투자 진행 중";
+        }
+
+        if (investmentState.IsAtSuccessLimit)
+        {
+            return status + " | 최대 강화";
+        }
+
+        int nextCost = GetInvestmentCost(definition, investmentState);
+        int chancePercent = Mathf.RoundToInt(GetInvestmentSuccessChance(definition, investmentState) * 100f);
+        return status + " | 다음 " + FormatMoneyK(nextCost) + " | 성공 " + chancePercent + "%";
+    }
+
+    private void SetInvestmentExplainText(GameObject targetObject, StructDefinitionData definition)
+    {
+        if (investExplainText == null)
+        {
+            return;
+        }
+
+        string status = GetInvestmentStatusText(targetObject, definition);
+        if (string.IsNullOrEmpty(status))
+        {
+            SetText(investExplainText, string.Empty);
+            return;
+        }
+
+        SetText(investExplainText, "강화 상태: " + status);
+    }
+
+    public bool CanInvestInStructure(GameObject targetObject)
+    {
+        StructureInvestmentState investmentState = GetInvestmentState(targetObject);
+        return investmentState != null &&
+               investmentState.StructureKind != StructureInvestmentState.InvestmentStructureKind.Unknown &&
+               !investmentState.hasPendingInvestment &&
+               !investmentState.IsAtSuccessLimit;
     }
 
     public bool IsConstructionPending(GameObject targetObject)
@@ -191,12 +263,40 @@ public class StructureActionManager : MonoBehaviour
         return false;
     }
 
+    public bool IsDemolitionPending(GameObject targetObject)
+    {
+        if (targetObject == null)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < demolitionJobs.Count; i += 1)
+        {
+            if (demolitionJobs[i].TargetObject == targetObject)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public bool TryGetProductionMultiplier(GameObject targetObject, out float multiplier)
     {
         multiplier = 1f;
         if (targetObject == null)
         {
             return false;
+        }
+
+        StructureInvestmentState investmentState = targetObject.GetComponent<StructureInvestmentState>();
+        if (investmentState != null)
+        {
+            multiplier = investmentState.RefreshCurrentStatMultiplier();
+            if (multiplier > 1f)
+            {
+                return true;
+            }
         }
 
         for (int i = 0; i < investmentBoosts.Count; i += 1)
@@ -258,6 +358,7 @@ public class StructureActionManager : MonoBehaviour
 
         if (!stageManager.TrySpendMoney(selectedDefinition.BuildCost))
         {
+            ShowMoneyShortageToast();
             Debug.LogWarning("Not enough money to build " + selectedDefinition.Name + "." );
             return;
         }
@@ -267,6 +368,7 @@ public class StructureActionManager : MonoBehaviour
         job.StructureKey = selectedDefinition.Name;
         job.TargetObject = selectedTarget;
         job.RemainingYears = Mathf.Max(1, selectedDefinition.BuildYears);
+        job.WorkVisualObject = CreateConstructionWorkVisual(selectedTarget);
         constructionJobs.Add(job);
 
         SetBuildPanelActive(false);
@@ -280,33 +382,57 @@ public class StructureActionManager : MonoBehaviour
             return;
         }
 
-        if (!stageManager.TrySpendMoney(selectedDefinition.InvestCost))
+        StructureInvestmentState investmentState = GetInvestmentState(selectedTarget);
+        if (investmentState == null || investmentState.StructureKind == StructureInvestmentState.InvestmentStructureKind.Unknown)
         {
+            Debug.LogWarning("Investment state is missing or unsupported for " + selectedDefinition.Name + "." );
+            return;
+        }
+
+        if (investmentState.hasPendingInvestment)
+        {
+            Debug.LogWarning("Investment is already pending for " + selectedDefinition.Name + "." );
+            return;
+        }
+
+        if (investmentState.IsAtSuccessLimit)
+        {
+            Debug.LogWarning("Investment success limit reached for " + selectedDefinition.Name + "." );
+            return;
+        }
+
+        int investCost = GetInvestmentCost(selectedDefinition, investmentState);
+        if (!stageManager.TrySpendMoney(investCost))
+        {
+            ShowMoneyShortageToast();
             Debug.LogWarning("Not enough money to invest " + selectedDefinition.Name + "." );
             return;
         }
 
-        InvestmentBoost boost = FindInvestmentBoost(selectedTarget);
-        if (boost == null)
-        {
-            boost = new InvestmentBoost();
-            boost.TargetObject = selectedTarget;
-            investmentBoosts.Add(boost);
-        }
+        investmentState.hasPendingInvestment = true;
+        investmentState.pendingResolveYear = stageManager.CurrentYear + 1;
+        investmentState.pendingCost = investCost;
+        investmentState.pendingSuccessChance = GetInvestmentSuccessChance(selectedDefinition, investmentState);
 
-        boost.RemainingYears = Random.Range(1, 6);
-        boost.Multiplier = InvestMultiplier;
         SetStructureActionPanelsActive(false);
         RefreshLinkedUi();
     }
 
     private void ConfirmRepair()
     {
-        if (selectedDefinition != null)
+        if (selectedTarget == null || selectedDefinition == null || stageManager == null)
         {
-            Debug.Log("Repair is reserved as dummy data for " + selectedDefinition.Name + "." );
+            return;
         }
 
+        if (!stageManager.TrySpendMoney(selectedDefinition.RepairCost))
+        {
+            ShowMoneyShortageToast();
+            Debug.LogWarning("Not enough money to repair " + selectedDefinition.Name + "." );
+            return;
+        }
+
+        Debug.Log("Repair is reserved as dummy data for " + selectedDefinition.Name + "." );
         SetStructureActionPanelsActive(false);
         ClearSelection();
     }
@@ -318,11 +444,24 @@ public class StructureActionManager : MonoBehaviour
             return;
         }
 
+        if (IsDemolitionPending(selectedTarget))
+        {
+            SetStructureActionPanelsActive(false);
+            return;
+        }
+
         if (!stageManager.TrySpendMoney(selectedDefinition.DestroyCost))
         {
+            ShowMoneyShortageToast();
             Debug.LogWarning("Not enough money to destroy " + selectedDefinition.Name + "." );
             return;
         }
+
+        DemolitionJob job = new DemolitionJob();
+        job.TargetObject = selectedTarget;
+        job.RemainingYears = 1;
+        job.WorkVisualObject = CreateConstructionWorkVisual(selectedTarget);
+        demolitionJobs.Add(job);
 
         selectedTarget.SetActive(false);
         RemoveInvestmentBoost(selectedTarget);
@@ -331,15 +470,166 @@ public class StructureActionManager : MonoBehaviour
         RefreshLinkedUi();
     }
 
+    private void ShowMoneyShortageToast()
+    {
+        if (toastPopupManager == null)
+        {
+            BindSceneObjects();
+        }
+
+        if (toastPopupManager != null)
+        {
+            toastPopupManager.ShowMoneyShortage();
+        }
+    }
+
+    private StructureInvestmentState GetInvestmentState(GameObject targetObject)
+    {
+        if (targetObject == null)
+        {
+            return null;
+        }
+
+        StructureInvestmentState investmentState = targetObject.GetComponent<StructureInvestmentState>();
+        if (investmentState == null)
+        {
+            investmentState = targetObject.AddComponent<StructureInvestmentState>();
+        }
+
+        investmentState.ConfigureForStructureName(targetObject.name);
+        return investmentState;
+    }
+
+    private int GetInvestmentCost(StructDefinitionData definition, StructureInvestmentState investmentState)
+    {
+        if (definition == null)
+        {
+            return 0;
+        }
+
+        if (investmentState == null)
+        {
+            return definition.InvestCost;
+        }
+
+        int successIndex = Mathf.Max(0, investmentState.successfulInvestmentCount);
+        if (investmentState.StructureKind == StructureInvestmentState.InvestmentStructureKind.House)
+        {
+            return HouseInvestmentCosts[Mathf.Clamp(successIndex, 0, HouseInvestmentCosts.Length - 1)];
+        }
+
+        if (investmentState.StructureKind == StructureInvestmentState.InvestmentStructureKind.CommonFacility)
+        {
+            int costIndex = Mathf.Clamp(successIndex, 0, Mathf.Min(9, HouseInvestmentCosts.Length - 1));
+            return Mathf.Max(definition.InvestCost, HouseInvestmentCosts[costIndex]);
+        }
+
+        if (investmentState.StructureKind == StructureInvestmentState.InvestmentStructureKind.UniqueStructure)
+        {
+            int resourceTotal = GetResourceTotal(definition);
+            int scaledCost = definition.InvestCost + resourceTotal * 20 * (successIndex + 1);
+            return Mathf.Max(definition.InvestCost, scaledCost);
+        }
+
+        return definition.InvestCost;
+    }
+
+    private float GetInvestmentSuccessChance(StructDefinitionData definition, StructureInvestmentState investmentState)
+    {
+        if (NCSeoulDebug.Debug.ForceInvestmentSuccessChance)
+        {
+            return 1f;
+        }
+
+        if (definition == null || investmentState == null || stageManager == null)
+        {
+            return 0f;
+        }
+
+        int science = stageManager.Science;
+        if (investmentState.StructureKind == StructureInvestmentState.InvestmentStructureKind.House)
+        {
+            return GetHouseInvestmentSuccessChance(science, investmentState.successfulInvestmentCount);
+        }
+
+        if (investmentState.StructureKind == StructureInvestmentState.InvestmentStructureKind.CommonFacility)
+        {
+            return GetCommonFacilitySuccessChance(science, investmentState.successfulInvestmentCount, GetResourceTotal(definition));
+        }
+
+        if (investmentState.StructureKind == StructureInvestmentState.InvestmentStructureKind.UniqueStructure)
+        {
+            return GetUniqueStructureSuccessChance(science, definition);
+        }
+
+        return 0f;
+    }
+
+    private float GetHouseInvestmentSuccessChance(int science, int successCount)
+    {
+        if (successCount < 5)
+        {
+            return Mathf.Clamp(0.30f + science * 0.00028f, 0.30f, 0.75f);
+        }
+
+        if (successCount < 10)
+        {
+            return Mathf.Clamp(0.08f + science * 0.00036f, 0.10f, 0.88f);
+        }
+
+        return Mathf.Clamp(0.05f + science * 0.00022f, 0.08f, 0.65f);
+    }
+
+    private float GetCommonFacilitySuccessChance(int science, int successCount, int resourceTotal)
+    {
+        float resourcePenalty = Mathf.Clamp(resourceTotal * 0.01f, 0f, 0.20f);
+        if (successCount < 5)
+        {
+            return Mathf.Clamp(0.25f - resourcePenalty + science * 0.00024f, 0.12f, 0.70f);
+        }
+
+        return Mathf.Clamp(0.06f - resourcePenalty * 0.5f + science * 0.00030f, 0.08f, 0.82f);
+    }
+
+    private float GetUniqueStructureSuccessChance(int science, StructDefinitionData definition)
+    {
+        int resourceTotal = GetResourceTotal(definition);
+        float baseChance = Mathf.Clamp(0.28f - resourceTotal * 0.015f, 0.06f, 0.25f);
+        float requiredScience = 400f + resourceTotal * 260f;
+        float scienceBonus = Mathf.Clamp01(science / requiredScience) * 0.65f;
+        return Mathf.Clamp(baseChance + scienceBonus, 0.05f, 0.85f);
+    }
+
+    private int GetResourceTotal(StructDefinitionData definition)
+    {
+        if (definition == null)
+        {
+            return 0;
+        }
+
+        return Mathf.Max(0, definition.MoneyProduction)
+            + Mathf.Max(0, definition.PeopleIncrease)
+            + Mathf.Max(0, definition.ScienceIncrease)
+            + Mathf.Max(0, definition.LoveIncrease)
+            + Mathf.Max(0, definition.ConvenienceIncrease);
+    }
+
     private void HandleBeforeYearProduction(int currentYear)
     {
-        bool completedAny = false;
+        bool completedAny = ResolvePendingInvestments(currentYear);
+        bool demolitionCompletedAny = ResolveDemolitionJobs();
         for (int i = constructionJobs.Count - 1; i >= 0; i -= 1)
         {
             ConstructionJob job = constructionJobs[i];
             job.RemainingYears -= 1;
             if (job.RemainingYears <= 0)
             {
+                if (job.WorkVisualObject != null)
+                {
+                    DestroyInvestmentVisual(job.WorkVisualObject);
+                    job.WorkVisualObject = null;
+                }
+
                 if (job.TargetObject != null)
                 {
                     job.TargetObject.SetActive(true);
@@ -350,10 +640,78 @@ public class StructureActionManager : MonoBehaviour
             }
         }
 
-        if (completedAny)
+        if (completedAny || demolitionCompletedAny)
         {
             RefreshLinkedUi();
         }
+    }
+
+    private bool ResolveDemolitionJobs()
+    {
+        bool completedAny = false;
+        for (int i = demolitionJobs.Count - 1; i >= 0; i -= 1)
+        {
+            DemolitionJob job = demolitionJobs[i];
+            job.RemainingYears -= 1;
+            if (job.RemainingYears <= 0)
+            {
+                if (job.WorkVisualObject != null)
+                {
+                    DestroyInvestmentVisual(job.WorkVisualObject);
+                    job.WorkVisualObject = null;
+                }
+
+                if (job.TargetObject != null)
+                {
+                    job.TargetObject.SetActive(false);
+                }
+
+                demolitionJobs.RemoveAt(i);
+                completedAny = true;
+            }
+        }
+
+        return completedAny;
+    }
+
+    private bool ResolvePendingInvestments(int currentYear)
+    {
+        StructureInvestmentState[] investmentStates = FindObjectsOfType<StructureInvestmentState>(true);
+        bool resolvedAny = false;
+        for (int i = 0; i < investmentStates.Length; i += 1)
+        {
+            StructureInvestmentState investmentState = investmentStates[i];
+            if (investmentState == null || !investmentState.hasPendingInvestment || investmentState.pendingResolveYear > currentYear)
+            {
+                continue;
+            }
+
+            investmentState.totalInvestmentAttemptCount += 1;
+            bool succeeded = Random.value <= investmentState.pendingSuccessChance;
+            if (succeeded)
+            {
+                investmentState.successfulInvestmentCount += 1;
+                ApplyInvestmentVisualMilestone(investmentState);
+            }
+            else
+            {
+                investmentState.failedInvestmentCount += 1;
+            }
+
+            investmentState.lastInvestmentSucceeded = succeeded;
+            investmentState.lastResolvedYear = currentYear;
+            investmentState.RefreshCurrentStatMultiplier();
+            investmentState.hasPendingInvestment = false;
+            investmentState.pendingResolveYear = 0;
+            investmentState.pendingCost = 0;
+            investmentState.pendingSuccessChance = 0f;
+            investmentState.ConfigureForStructureName(investmentState.gameObject.name);
+            resolvedAny = true;
+
+            Debug.Log("Investment " + (succeeded ? "succeeded" : "failed") + " for " + investmentState.gameObject.name + ". Success=" + investmentState.successfulInvestmentCount + ", Fail=" + investmentState.failedInvestmentCount + ", Year=" + currentYear + ".");
+        }
+
+        return resolvedAny;
     }
 
     private void HandleAfterYearProduction(int currentYear)
@@ -375,10 +733,218 @@ public class StructureActionManager : MonoBehaviour
         }
     }
 
+    private GameObject CreateConstructionWorkVisual(GameObject targetObject)
+    {
+        BindInvestmentVisualPrefabs();
+        if (targetObject == null || structingPrefab == null)
+        {
+            return null;
+        }
+
+        Transform parent = targetObject.transform.parent;
+        GameObject workVisualObject = Instantiate(structingPrefab, parent);
+        workVisualObject.name = structingPrefab.name;
+        workVisualObject.transform.localPosition = targetObject.transform.localPosition;
+        workVisualObject.transform.localRotation = targetObject.transform.localRotation;
+        workVisualObject.transform.localScale = targetObject.transform.localScale;
+        workVisualObject.SetActive(true);
+        return workVisualObject;
+    }
+
+    private void BindInvestmentVisualPrefabs()
+    {
+#if UNITY_EDITOR
+        if (newHousePrefab == null)
+        {
+            newHousePrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefab/NewHouse.prefab");
+        }
+
+        if (apartmentPrefab == null)
+        {
+            apartmentPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefab/ApartMent.prefab");
+        }
+
+        if (newSchoolPrefab == null)
+        {
+            newSchoolPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefab/NewSchool.prefab");
+        }
+
+        if (newDistrictPrefab == null)
+        {
+            newDistrictPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefab/NewDistrict.prefab");
+        }
+
+        if (newUniversityPrefab == null)
+        {
+            newUniversityPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefab/NewUniversity.prefab");
+        }
+
+        if (structingPrefab == null)
+        {
+            structingPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefab/Structing.prefab");
+        }
+#endif
+    }
+
+    private void ApplyInvestmentVisualMilestone(StructureInvestmentState investmentState)
+    {
+        if (investmentState == null)
+        {
+            return;
+        }
+
+        int targetStage;
+        GameObject prefab;
+        if (!TryGetInvestmentVisualPrefab(investmentState, out targetStage, out prefab) || prefab == null)
+        {
+            return;
+        }
+
+        if (investmentState.modelStage == targetStage && investmentState.activeVisualInstance != null)
+        {
+            return;
+        }
+
+        Transform visualRoot = GetOrCreateVisualRoot(investmentState.transform);
+        HideExistingVisualChildren(visualRoot, investmentState.activeVisualInstance);
+        if (investmentState.activeVisualInstance != null)
+        {
+            DestroyInvestmentVisual(investmentState.activeVisualInstance);
+            investmentState.activeVisualInstance = null;
+        }
+
+        GameObject instance = Instantiate(prefab, visualRoot);
+        instance.name = prefab.name;
+        instance.transform.localPosition = Vector3.zero;
+        instance.transform.localRotation = Quaternion.identity;
+        instance.transform.localScale = Vector3.one;
+        investmentState.activeVisualInstance = instance;
+        investmentState.modelStage = targetStage;
+        Debug.Log("Investment visual upgraded for " + investmentState.gameObject.name + " to " + prefab.name + ". Stage=" + targetStage + ".");
+    }
+
+    private void DestroyInvestmentVisual(GameObject visualObject)
+    {
+        if (visualObject == null)
+        {
+            return;
+        }
+
+        if (Application.isPlaying)
+        {
+            Destroy(visualObject);
+        }
+        else
+        {
+            DestroyImmediate(visualObject);
+        }
+    }
+
+    private bool TryGetInvestmentVisualPrefab(StructureInvestmentState investmentState, out int targetStage, out GameObject prefab)
+    {
+        targetStage = 0;
+        prefab = null;
+        if (investmentState == null)
+        {
+            return false;
+        }
+
+        StructureInvestmentState.InvestmentStructureKind kind = investmentState.StructureKind;
+        int successCount = investmentState.successfulInvestmentCount;
+        if (kind == StructureInvestmentState.InvestmentStructureKind.House)
+        {
+            if (successCount >= 10)
+            {
+                targetStage = 2;
+                prefab = apartmentPrefab;
+                return prefab != null;
+            }
+
+            if (successCount >= 5)
+            {
+                targetStage = 1;
+                prefab = newHousePrefab;
+                return prefab != null;
+            }
+        }
+
+        if (kind == StructureInvestmentState.InvestmentStructureKind.CommonFacility && successCount >= 5)
+        {
+            targetStage = 1;
+            if (investmentState.gameObject.name == "School")
+            {
+                prefab = newSchoolPrefab;
+            }
+            else if (investmentState.gameObject.name == "DistrictOffice")
+            {
+                prefab = newDistrictPrefab;
+            }
+            else if (investmentState.gameObject.name == "University")
+            {
+                prefab = newUniversityPrefab;
+            }
+
+            return prefab != null;
+        }
+
+        return false;
+    }
+
+    private Transform GetOrCreateVisualRoot(Transform structureRoot)
+    {
+        Transform visualRoot = structureRoot.Find(VisualRootName);
+        if (visualRoot != null)
+        {
+            return visualRoot;
+        }
+
+        GameObject visualRootObject = new GameObject(VisualRootName);
+        visualRoot = visualRootObject.transform;
+        visualRoot.SetParent(structureRoot, false);
+        visualRoot.localPosition = Vector3.zero;
+        visualRoot.localRotation = Quaternion.identity;
+        visualRoot.localScale = Vector3.one;
+
+        List<Transform> originalChildren = new List<Transform>();
+        foreach (Transform child in structureRoot)
+        {
+            if (child != visualRoot && child.name != VisualRootName)
+            {
+                originalChildren.Add(child);
+            }
+        }
+
+        for (int i = 0; i < originalChildren.Count; i += 1)
+        {
+            originalChildren[i].SetParent(visualRoot, true);
+        }
+
+        return visualRoot;
+    }
+
+    private void HideExistingVisualChildren(Transform visualRoot, GameObject activeVisualInstance)
+    {
+        if (visualRoot == null)
+        {
+            return;
+        }
+
+        foreach (Transform child in visualRoot)
+        {
+            if (activeVisualInstance != null && child.gameObject == activeVisualInstance)
+            {
+                continue;
+            }
+
+            child.gameObject.SetActive(false);
+        }
+    }
+
     private void BindSceneObjects()
     {
         stageManager = GetComponent<StructStageManager>();
         districtPanelManager = GetComponent<DistrictStructurePanelManager>();
+        toastPopupManager = GetComponent<ToastPopupManager>();
 
         Transform buildPanelTransform = transform.Find(buildPanelPath);
         if (buildPanelTransform != null)
@@ -392,6 +958,10 @@ public class StructureActionManager : MonoBehaviour
         }
 
         BindActionPanel(investPanelPath, "InvestBtn", ref investPanel, ref investNameText, ref investDescText, ref confirmInvestButton);
+        if (investPanel != null)
+        {
+            investExplainText = FindText(investPanel.transform, "Explain");
+        }
         BindActionPanel(repairPanelPath, "InvestBtn", ref repairPanel, ref repairNameText, ref repairDescText, ref confirmRepairButton);
         BindActionPanel(destroyPanelPath, "DestBtn", ref destroyPanel, ref destroyNameText, ref destroyDescText, ref confirmDestroyButton);
 
@@ -622,6 +1192,14 @@ public class StructureActionManager : MonoBehaviour
         public string RegionPath;
         public string StructureKey;
         public GameObject TargetObject;
+        public GameObject WorkVisualObject;
+        public int RemainingYears;
+    }
+
+    private class DemolitionJob
+    {
+        public GameObject TargetObject;
+        public GameObject WorkVisualObject;
         public int RemainingYears;
     }
 

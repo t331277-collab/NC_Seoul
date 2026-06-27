@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using TMPro;
@@ -349,7 +349,7 @@ public class DistrictStructurePanelManager : MonoBehaviour
             return false;
         }
 
-        if (!showActive && structureActionManager != null && structureActionManager.IsConstructionPending(target.gameObject))
+        if (!showActive && structureActionManager != null && (structureActionManager.IsConstructionPending(target.gameObject) || structureActionManager.IsDemolitionPending(target.gameObject)))
         {
             return false;
         }
@@ -392,6 +392,7 @@ public class DistrictStructurePanelManager : MonoBehaviour
         }
 
         string displayName = ResolveDisplayName(definition);
+
         SetText(FindText(itemObject.transform, "StruName"), displayName);
         SetText(FindText(itemObject.transform, "People"), definition.People.ToString());
         SetText(FindText(itemObject.transform, "Money"), definition.Money.ToString());
@@ -458,6 +459,7 @@ public class DistrictStructurePanelManager : MonoBehaviour
 
         BindSceneObjects();
         binding.Configure(structureActionManager, this, targetObject, definition, displayName, actionKind);
+        button.interactable = actionKind != StructureActionButtonBinding.ActionKind.Invest || structureActionManager == null || structureActionManager.CanInvestInStructure(targetObject);
         button.onClick.RemoveAllListeners();
         button.onClick.AddListener(binding.InvokeAction);
     }
