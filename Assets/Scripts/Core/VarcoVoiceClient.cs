@@ -86,7 +86,7 @@ public class VarcoVoiceClient : MonoBehaviour
             return;
         }
         
-        string fileName = $"{nodeId}.mp3";
+        string fileName = $"{nodeId}_{GetStableTextHash(text)}.mp3";
         string filePath = Path.Combine(cachePath, fileName);
         
         // If already cached, just load it
@@ -170,6 +170,20 @@ public class VarcoVoiceClient : MonoBehaviour
                 AudioClip clip = DownloadHandlerAudioClip.GetContent(www);
                 onSuccess?.Invoke(clip);
             }
+        }
+    }
+
+    private string GetStableTextHash(string text)
+    {
+        if (string.IsNullOrEmpty(text)) return "0";
+        unchecked
+        {
+            uint hash = 2166136261u;
+            foreach (char c in text)
+            {
+                hash = (hash ^ c) * 16777619u;
+            }
+            return hash.ToString("X8");
         }
     }
 }
