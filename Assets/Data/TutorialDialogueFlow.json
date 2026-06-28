@@ -324,6 +324,49 @@
       "text": "자 그럼 이제 저와 함께 서울을 멋진 도시로 만들어봐요!",
       "lockInput": true,
       "onCompleteSetFlag": "love_007_done",
+      "next": "destroy_001"
+    },
+    {
+      "id": "destroy_001",
+      "text": "본격적인 도시 개발을 시작하기 전에, 우리에게는 꼭 해결해야 할 역사적 과제가 하나 남아있어요.",
+      "lockInput": true,
+      "onCompleteSetFlag": "destroy_001_done",
+      "next": "destroy_002"
+    },
+    {
+      "id": "destroy_002",
+      "text": "경복궁 앞을 가로막고 있는 식민 통치의 상징, '조선총독부' 청사를 철거하여 민족의 정기를 바로잡아야 합니다!",
+      "lockInput": true,
+      "onCompleteSetFlag": "destroy_002_done",
+      "next": "destroy_003"
+    },
+    {
+      "id": "destroy_003",
+      "text": "지도에서 조선총독부가 있는 지역을 누르고, 조선총독부의 [철거] 버튼을 눌러 철거를 완료해 주세요! 철거 비용은 0원입니다!",
+      "lockInput": true,
+      "onCompleteSetFlag": "destroy_003_done",
+      "next": "wait_destroy_action"
+    },
+    {
+      "id": "wait_destroy_action",
+      "type": "waitForDemolition",
+      "instruction": "조선총독부를 철거하세요!",
+      "allowedTargetPath": "Stru_JosunChongdokBu",
+      "onActionSetFlag": "chongdokbu_demolished",
+      "next": "destroy_004"
+    },
+    {
+      "id": "destroy_004",
+      "text": "훌륭합니다! 조선총독부가 철거되고 경복궁의 본모습을 되찾기 위한 첫걸음이 시작되었습니다.",
+      "lockInput": true,
+      "onCompleteSetFlag": "destroy_004_done",
+      "next": "destroy_005"
+    },
+    {
+      "id": "destroy_005",
+      "text": "이제 정말로 서울을 세계 최고의 일류 도시로 발전시켜 나갈 준비가 완벽히 끝났습니다. {playerName}님, 파이팅!",
+      "lockInput": true,
+      "onCompleteSetFlag": "destroy_005_done",
       "next": null
     }
   ]

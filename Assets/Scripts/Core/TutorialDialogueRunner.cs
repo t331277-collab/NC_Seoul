@@ -28,6 +28,7 @@ public class TutorialDialogueFlow
 
 public class TutorialDialogueRunner : MonoBehaviour
 {
+    public static TutorialDialogueRunner Instance { get; private set; }
     public string flowJsonPath = "Data/TutorialDialogueFlow.json";
     
     private TutorialDialogueFlow flow;
@@ -43,6 +44,7 @@ public class TutorialDialogueRunner : MonoBehaviour
 
     private void Awake()
     {
+        Instance = this;
         voiceManager = gameObject.AddComponent<TutorialVoiceSynthesisManager>();
         inputManager = gameObject.AddComponent<TutorialInputLockManager>();
         LoadFlow();
@@ -123,6 +125,15 @@ public class TutorialDialogueRunner : MonoBehaviour
             
             Debug.Log($"[행동 대기중]: {currentNode.instruction}");
             BindActionGate(currentNode.allowedTargetPath);
+            return;
+        }
+
+        if (currentNode.type == "waitForDemolition")
+        {
+            isWaitingForVoice = false;
+            isWaitingForAction = true;
+            inputManager.UnlockInput();
+            Debug.Log($"[철거 대기중]: {currentNode.instruction}");
             return;
         }
 
@@ -228,6 +239,23 @@ public class TutorialDialogueRunner : MonoBehaviour
         {
             inputManager.UnlockInput();
             Debug.Log("[튜토리얼 종료]");
+        }
+    }
+
+    public void NotifyStructureDemolished(string structureId)
+    {
+        if (isWaitingForAction && currentNode != null && currentNode.type == "waitForDemolition" && currentNode.allowedTargetPath == structureId)
+        {
+            isWaitingForAction = false;
+            inputManager.LockInput();
+            if (!string.IsNullOrEmpty(currentNode.onActionSetFlag))
+            {
+                TutorialFlagStore.SetFlag(currentNode.onActionSetFlag);
+            }
+            if (!string.IsNullOrEmpty(currentNode.next))
+            {
+                RunNode(currentNode.next);
+            }
         }
     }
 

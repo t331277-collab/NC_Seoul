@@ -488,6 +488,10 @@ public class StructureActionManager : MonoBehaviour
         selectedTarget.SetActive(false);
         RemoveInvestmentBoost(selectedTarget);
         SetStructureActionPanelsActive(false);
+        if (TutorialDialogueRunner.Instance != null && selectedDefinition != null)
+        {
+            TutorialDialogueRunner.Instance.NotifyStructureDemolished(selectedDefinition.Name);
+        }
         ClearSelection();
         RefreshLinkedUi();
     }
