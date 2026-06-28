@@ -951,13 +951,94 @@ public class StructureActionManager : MonoBehaviour
         }
 
         Transform parent = targetObject.transform.parent;
+        Transform referenceTransform = ResolveConstructionWorkReferenceTransform(targetObject.transform);
         GameObject workVisualObject = Instantiate(structingPrefab, parent);
         workVisualObject.name = structingPrefab.name;
-        workVisualObject.transform.localPosition = targetObject.transform.localPosition;
-        workVisualObject.transform.localRotation = targetObject.transform.localRotation;
-        workVisualObject.transform.localScale = targetObject.transform.localScale;
+        ApplyConstructionWorkTransform(workVisualObject.transform, targetObject.transform, referenceTransform, parent);
         workVisualObject.SetActive(true);
         return workVisualObject;
+    }
+
+    private Transform ResolveConstructionWorkReferenceTransform(Transform root)
+    {
+        if (root == null)
+        {
+            return null;
+        }
+
+        Transform bestStructChild = null;
+        float bestScaleScore = float.MinValue;
+        FindLargestStructChild(root, ref bestStructChild, ref bestScaleScore);
+        return bestStructChild == null ? root : bestStructChild;
+    }
+
+    private void FindLargestStructChild(Transform parent, ref Transform bestStructChild, ref float bestScaleScore)
+    {
+        if (parent == null)
+        {
+            return;
+        }
+
+        foreach (Transform child in parent)
+        {
+            if (child.name.StartsWith("Stru", System.StringComparison.Ordinal))
+            {
+                float scaleScore = child.lossyScale.sqrMagnitude;
+                if (bestStructChild == null || scaleScore > bestScaleScore)
+                {
+                    bestStructChild = child;
+                    bestScaleScore = scaleScore;
+                }
+            }
+
+            FindLargestStructChild(child, ref bestStructChild, ref bestScaleScore);
+        }
+    }
+
+    private void ApplyConstructionWorkTransform(Transform workTransform, Transform rootTransform, Transform referenceTransform, Transform parent)
+    {
+        if (workTransform == null || rootTransform == null)
+        {
+            return;
+        }
+
+        if (referenceTransform == null || referenceTransform == rootTransform)
+        {
+            workTransform.localPosition = rootTransform.localPosition;
+            workTransform.localRotation = rootTransform.localRotation;
+            workTransform.localScale = rootTransform.localScale;
+            return;
+        }
+
+        if (parent == null)
+        {
+            workTransform.position = referenceTransform.position;
+            workTransform.rotation = referenceTransform.rotation;
+            workTransform.localScale = referenceTransform.lossyScale;
+            return;
+        }
+
+        workTransform.localPosition = parent.InverseTransformPoint(referenceTransform.position);
+        workTransform.localRotation = Quaternion.Inverse(parent.rotation) * referenceTransform.rotation;
+        workTransform.localScale = DivideScale(referenceTransform.lossyScale, parent.lossyScale);
+    }
+
+    private Vector3 DivideScale(Vector3 worldScale, Vector3 parentWorldScale)
+    {
+        return new Vector3(
+            DivideScaleComponent(worldScale.x, parentWorldScale.x),
+            DivideScaleComponent(worldScale.y, parentWorldScale.y),
+            DivideScaleComponent(worldScale.z, parentWorldScale.z));
+    }
+
+    private float DivideScaleComponent(float value, float parentValue)
+    {
+        if (Mathf.Approximately(parentValue, 0f))
+        {
+            return value;
+        }
+
+        return value / parentValue;
     }
 
     private void BindInvestmentVisualPrefabs()
