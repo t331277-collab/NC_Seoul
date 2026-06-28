@@ -8,7 +8,7 @@ public class InGameBgmManager : MonoBehaviour
     [SerializeField] private AudioSource bgmAudioSource;
     [SerializeField] private AudioClip[] playlist;
     [SerializeField] private float normalVolume = 1f;
-    [SerializeField] private float duckedVolume = 0.5f;
+    [SerializeField] private float duckedVolume = 0.2f;
     [SerializeField] private float restoreDuration = 1f;
 
     private int currentTrackIndex;

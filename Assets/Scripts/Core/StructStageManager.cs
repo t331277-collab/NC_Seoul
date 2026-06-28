@@ -16,6 +16,7 @@ public class StructStageManager : MonoBehaviour
     private const float PopulationMoneyGrowthFactor = 0.005f;
     private const float PopulationScienceGrowthFactor = 0.005f;
     private const float ScienceMoneyBonusFactor = 0.1f;
+    private const float ConvenienceProductionBonusDivisor = 600f;
     private static readonly Color32 PeopleOverCapacityColor = new Color32(220, 64, 64, 255);
     private const float CutSceneFadeDuration = 1f;
     private const float CutSceneTextInterval = 0.5f;
@@ -423,6 +424,7 @@ private IEnumerator PlayNextYearTransition()
         }
 
         AddStructValues(seoulRoot, ref total);
+        total = ApplyConvenienceProductionBonus(total);
         return total;
     }
 
@@ -485,6 +487,21 @@ private IEnumerator PlayNextYearTransition()
         total.Science += definition.ScienceIncrease;
         total.Love += definition.LoveIncrease;
         total.Convenience += definition.ConvenienceIncrease;
+    }
+
+    private StatValues ApplyConvenienceProductionBonus(StatValues values)
+    {
+        float bonusRate = Mathf.Max(0, convenience) / ConvenienceProductionBonusDivisor;
+        if (bonusRate <= 0f)
+        {
+            return values;
+        }
+
+        float multiplier = 1f + bonusRate;
+        values.Money = Mathf.CeilToInt(values.Money * multiplier);
+        values.Science = Mathf.CeilToInt(values.Science * multiplier);
+        values.Love = Mathf.CeilToInt(values.Love * multiplier);
+        return values;
     }
 
     private int CalculateCurrentPopulationCapacity()

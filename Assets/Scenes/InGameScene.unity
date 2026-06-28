@@ -41759,7 +41759,7 @@ MonoBehaviour:
   - {fileID: 8300000, guid: dc579c3165170a04bbff35cba673792b, type: 3}
   - {fileID: 8300000, guid: 829b7cb6fa8196a44a1e7fa37131070b, type: 3}
   normalVolume: 1
-  duckedVolume: 0.5
+  duckedVolume: 0.2
   restoreDuration: 1
 --- !u!1001 &1582635899
 PrefabInstance:
