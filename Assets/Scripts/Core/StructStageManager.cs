@@ -38,6 +38,7 @@ public class StructStageManager : MonoBehaviour
     private TextMeshProUGUI cutSceneYearNumberText;
     private TextMeshProUGUI cutSceneYearNameText;
     private bool isYearTransitionPlaying;
+    private InfoNotificationManager infoNotificationManager;
 
 
     private int currentYear = InitialYear;
@@ -175,6 +176,7 @@ private IEnumerator PlayNextYearTransition()
     public void ApplyNextYear()
     {
         currentYear += 1;
+        ClearPreviousYearNotifications();
 
         if (BeforeYearProduction != null)
         {
@@ -255,6 +257,7 @@ private IEnumerator PlayNextYearTransition()
         loveTexts = FindStatTexts(uiRoot, "LovePanel");
 
         structureActionManager = uiRoot.GetComponent<StructureActionManager>();
+        infoNotificationManager = uiRoot.GetComponent<InfoNotificationManager>();
 
         Transform yearPanel = uiRoot.Find("YearPanel");
         if (yearPanel != null)
@@ -293,6 +296,19 @@ private IEnumerator PlayNextYearTransition()
         foreach (KeyValuePair<string, StructDefinitionData> pair in loadedDefinitions)
         {
             structDefinitions[pair.Key] = pair.Value;
+        }
+    }
+
+    private void ClearPreviousYearNotifications()
+    {
+        if (infoNotificationManager == null)
+        {
+            BindSceneObjects();
+        }
+
+        if (infoNotificationManager != null)
+        {
+            infoNotificationManager.ClearNotificationsForNewYear();
         }
     }
 

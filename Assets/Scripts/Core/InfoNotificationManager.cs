@@ -19,10 +19,19 @@ public class InfoNotificationManager : MonoBehaviour
     private GameObject inforTextObject;
     private RectTransform inforImageRect;
     private RectTransform contentRect;
+    private RectTransform scrollObjectRect;
+    private RectTransform itemParentRect;
     private RectTransform templateRect;
     private Button inforButton;
     private Button closeButton;
+    private ScrollRect scrollRect;
     private Coroutine imageMoveCoroutine;
+    private Vector2 inforImageDefaultPosition;
+    private bool hasInforImageDefaultPosition;
+    private bool inforTextDefaultActive = true;
+    private bool hasInforTextDefaultActive;
+    private Vector2 contentDefaultSize;
+    private bool hasContentDefaultSize;
 
     private void Awake()
     {
@@ -56,6 +65,14 @@ public class InfoNotificationManager : MonoBehaviour
         HideIntroText();
         MoveInfoImageToAlertPosition();
         CreateNotificationItem(status, description, regionName, regionTransform);
+    }
+
+    public void ClearNotificationsForNewYear()
+    {
+        BindSceneObjects();
+        ClearNotificationItems();
+        ResetInfoButtonAppearance(false);
+        SetActive(inforPanel, false);
     }
 
     private void BindSceneObjects()
@@ -95,6 +112,7 @@ public class InfoNotificationManager : MonoBehaviour
             inforTextObject = FindDirectChild(inforTransform, "TXT");
             Transform imageTransform = inforTransform.Find("Image");
             inforImageRect = imageTransform == null ? null : imageTransform.GetComponent<RectTransform>();
+            CaptureInfoButtonDefaults();
             inforButton = inforRoot.GetComponent<Button>();
             if (inforButton == null)
             {
@@ -108,7 +126,8 @@ public class InfoNotificationManager : MonoBehaviour
             inforPanel = panelTransform.gameObject;
             Transform contentTransform = panelTransform.Find("Content");
             contentRect = contentTransform == null ? null : contentTransform.GetComponent<RectTransform>();
-            Transform templateTransform = contentTransform == null ? null : contentTransform.Find("Template");
+            ConfigureScrollObjects(contentTransform);
+            Transform templateTransform = FindTemplateTransform(contentTransform);
             templateRect = templateTransform == null ? null : templateTransform.GetComponent<RectTransform>();
             Transform closeTransform = panelTransform.Find("Close");
             closeButton = closeTransform == null ? null : closeTransform.GetComponent<Button>();
@@ -118,6 +137,106 @@ public class InfoNotificationManager : MonoBehaviour
                 closeButton.onClick.AddListener(CloseInfoPanel);
             }
         }
+    }
+
+    private void CaptureInfoButtonDefaults()
+    {
+        if (inforImageRect != null && !hasInforImageDefaultPosition)
+        {
+            inforImageDefaultPosition = inforImageRect.anchoredPosition;
+            hasInforImageDefaultPosition = true;
+        }
+
+        if (inforTextObject != null && !hasInforTextDefaultActive)
+        {
+            inforTextDefaultActive = inforTextObject.activeSelf;
+            hasInforTextDefaultActive = true;
+        }
+    }
+
+    private void ConfigureScrollObjects(Transform contentTransform)
+    {
+        if (contentTransform == null || contentRect == null)
+        {
+            return;
+        }
+
+        if (!hasContentDefaultSize)
+        {
+            contentDefaultSize = contentRect.sizeDelta;
+            hasContentDefaultSize = true;
+        }
+
+        Transform scrollTransform = contentTransform.Find("Scroll Object");
+        if (scrollTransform == null)
+        {
+            scrollTransform = contentTransform.Find("ScrollObject");
+        }
+
+        if (scrollTransform == null)
+        {
+            GameObject scrollObject = new GameObject("Scroll Object", typeof(RectTransform));
+            scrollTransform = scrollObject.transform;
+            scrollTransform.SetParent(contentTransform, false);
+            RectTransform createdRect = scrollObject.GetComponent<RectTransform>();
+            createdRect.anchorMin = new Vector2(0f, 1f);
+            createdRect.anchorMax = new Vector2(1f, 1f);
+            createdRect.pivot = new Vector2(0.5f, 1f);
+            createdRect.anchoredPosition = Vector2.zero;
+            createdRect.sizeDelta = new Vector2(0f, Mathf.Max(contentRect.rect.height, contentDefaultSize.y));
+        }
+
+        scrollObjectRect = scrollTransform.GetComponent<RectTransform>();
+        itemParentRect = scrollObjectRect == null ? contentRect : scrollObjectRect;
+
+        Transform templateTransform = scrollTransform.Find("Template");
+        if (templateTransform == null)
+        {
+            templateTransform = contentTransform.Find("Template");
+            if (templateTransform != null && itemParentRect != null && templateTransform.parent != itemParentRect)
+            {
+                RectTransform templateAsRect = templateTransform.GetComponent<RectTransform>();
+                Vector2 anchoredPosition = templateAsRect == null ? Vector2.zero : templateAsRect.anchoredPosition;
+                templateTransform.SetParent(itemParentRect, false);
+                if (templateAsRect != null)
+                {
+                    templateAsRect.anchoredPosition = anchoredPosition;
+                }
+            }
+        }
+
+        RectMask2D mask = contentTransform.GetComponent<RectMask2D>();
+        if (mask == null)
+        {
+            contentTransform.gameObject.AddComponent<RectMask2D>();
+        }
+
+        scrollRect = contentTransform.GetComponent<ScrollRect>();
+        if (scrollRect == null)
+        {
+            scrollRect = contentTransform.gameObject.AddComponent<ScrollRect>();
+        }
+
+        scrollRect.content = itemParentRect;
+        scrollRect.viewport = contentRect;
+        scrollRect.horizontal = false;
+        scrollRect.vertical = true;
+        scrollRect.movementType = ScrollRect.MovementType.Clamped;
+        scrollRect.scrollSensitivity = 40f;
+    }
+
+    private Transform FindTemplateTransform(Transform contentTransform)
+    {
+        if (itemParentRect != null)
+        {
+            Transform templateTransform = itemParentRect.Find("Template");
+            if (templateTransform != null)
+            {
+                return templateTransform;
+            }
+        }
+
+        return contentTransform == null ? null : contentTransform.Find("Template");
     }
 
     private GameObject FindDirectChild(Transform parent, string childName)
@@ -139,6 +258,7 @@ public class InfoNotificationManager : MonoBehaviour
 
     private void OpenInfoPanel()
     {
+        ResetInfoButtonAppearance(true);
         SetActive(inforPanel, true);
     }
 
@@ -150,6 +270,12 @@ public class InfoNotificationManager : MonoBehaviour
     private void HideIntroText()
     {
         SetActive(inforTextObject, false);
+    }
+
+    private void ResetInfoButtonAppearance(bool animate)
+    {
+        SetActive(inforTextObject, hasInforTextDefaultActive ? inforTextDefaultActive : true);
+        MoveInfoImageToDefaultPosition(animate);
     }
 
     private void MoveInfoImageToAlertPosition()
@@ -165,6 +291,28 @@ public class InfoNotificationManager : MonoBehaviour
         }
 
         imageMoveCoroutine = StartCoroutine(MoveImageRoutine(inforImageRect.anchoredPosition, AlertImageTargetPosition));
+    }
+
+    private void MoveInfoImageToDefaultPosition(bool animate)
+    {
+        if (inforImageRect == null || !hasInforImageDefaultPosition)
+        {
+            return;
+        }
+
+        if (imageMoveCoroutine != null)
+        {
+            StopCoroutine(imageMoveCoroutine);
+            imageMoveCoroutine = null;
+        }
+
+        if (!animate)
+        {
+            inforImageRect.anchoredPosition = inforImageDefaultPosition;
+            return;
+        }
+
+        imageMoveCoroutine = StartCoroutine(MoveImageRoutine(inforImageRect.anchoredPosition, inforImageDefaultPosition));
     }
 
     private IEnumerator MoveImageRoutine(Vector2 from, Vector2 to)
@@ -189,7 +337,8 @@ public class InfoNotificationManager : MonoBehaviour
             return;
         }
 
-        GameObject itemObject = Instantiate(templateRect.gameObject, contentRect);
+        RectTransform parentRect = itemParentRect == null ? contentRect : itemParentRect;
+        GameObject itemObject = Instantiate(templateRect.gameObject, parentRect);
         itemObject.name = templateRect.name + "_" + notificationItems.Count;
         itemObject.SetActive(true);
 
@@ -208,7 +357,8 @@ public class InfoNotificationManager : MonoBehaviour
 
     private void ResizeContentForNotifications()
     {
-        if (contentRect == null || templateRect == null)
+        RectTransform parentRect = itemParentRect == null ? contentRect : itemParentRect;
+        if (contentRect == null || parentRect == null || templateRect == null)
         {
             return;
         }
@@ -222,9 +372,43 @@ public class InfoNotificationManager : MonoBehaviour
         float firstY = templateRect.anchoredPosition.y;
         float lastY = firstY - NotificationItemSpacing * (itemCount - 1);
         float requiredHeight = Mathf.Abs(lastY) + templateRect.rect.height + NotificationItemSpacing;
-        Vector2 sizeDelta = contentRect.sizeDelta;
-        sizeDelta.y = Mathf.Max(sizeDelta.y, requiredHeight);
-        contentRect.sizeDelta = sizeDelta;
+        Vector2 sizeDelta = parentRect.sizeDelta;
+        sizeDelta.y = Mathf.Max(contentRect.rect.height, requiredHeight);
+        parentRect.sizeDelta = sizeDelta;
+
+        if (scrollRect != null)
+        {
+            scrollRect.verticalNormalizedPosition = 1f;
+        }
+    }
+
+    private void ClearNotificationItems()
+    {
+        for (int i = notificationItems.Count - 1; i >= 0; i -= 1)
+        {
+            if (notificationItems[i] != null)
+            {
+                Destroy(notificationItems[i]);
+            }
+        }
+
+        notificationItems.Clear();
+
+        RectTransform parentRect = itemParentRect == null ? contentRect : itemParentRect;
+        if (parentRect != null && contentRect != null)
+        {
+            Vector2 sizeDelta = parentRect.sizeDelta;
+            sizeDelta.y = Mathf.Max(contentRect.rect.height, hasContentDefaultSize ? contentDefaultSize.y : contentRect.sizeDelta.y);
+            parentRect.sizeDelta = sizeDelta;
+            parentRect.anchoredPosition = Vector2.zero;
+        }
+
+        if (scrollRect != null)
+        {
+            scrollRect.verticalNormalizedPosition = 1f;
+        }
+
+        SetActive(templateRect == null ? null : templateRect.gameObject, false);
     }
 
     private void BindItemClick(GameObject itemObject, string regionName, Transform regionTransform)

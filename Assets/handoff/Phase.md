@@ -1,5 +1,21 @@
 # Phase
 
+## 2026-06-28 - Infor Notification Reset And Scroll
+
+- Role: Code Builder
+- Status: Completed
+- Scope: `UI/Infor` alert reset, yearly notification cleanup, and scrollable notification content.
+- Implemented:
+  - `UI/Infor/Image` default anchored position and `TXT` default active state are captured on bind.
+  - New notifications still hide `UI/Infor/TXT` and move `UI/Infor/Image` to `(38, -3.2)` over 0.5 seconds.
+  - Clicking `UI/Infor` opens `InforPanel` and restores the Infor button to its default image/text state.
+  - `StructStageManager.ApplyNextYear()` clears previous-year notifications before resolving new yearly events.
+  - `InforPanel/Content` now uses a runtime `Scroll Object` content RectTransform with `ScrollRect` and `RectMask2D` so cloned templates can be scrolled.
+  - Notification item spacing remains `186.8`.
+- Verified:
+  - `dotnet build .\Assembly-CSharp.csproj --no-restore` completed with 0 errors.
+  - Unity-MCP check: `InfoNotificationManager`, `StructStageManager`, `InforPanel`, `Content`, and `Template` exist; console error filter showed no script compilation errors.
+
 ## 2026-06-28 - Policy System Step 5-8 Implementation
 
 - Role: Code Builder
