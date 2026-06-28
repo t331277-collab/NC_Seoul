@@ -5,23 +5,35 @@ using UnityEngine.UI;
 public class MainSceneTitleIntroController : MonoBehaviour
 {
     [SerializeField] private Transform titlePanel;
-    [SerializeField] private CanvasGroup summaryCanvasGroup;
+    [SerializeField] private CanvasGroup sumCanvasGroup;
     [SerializeField] private CanvasGroup gameStartButtonCanvasGroup;
     [SerializeField] private Button gameStartButton;
     [SerializeField] private AudioClip bgmClip;
     [SerializeField] private AudioSource bgmAudioSource;
 
-    [SerializeField] private float summaryDelay = 4f;
-    [SerializeField] private float summaryFadeDuration = 4f;
-    [SerializeField] private float gameStartButtonDelay = 15f;
+    [SerializeField] private float sumDelay = 4f;
+    [SerializeField] private float sumFadeDuration = 1f;
+    [SerializeField] private float gameStartButtonDelay = 16f;
     [SerializeField] private float gameStartButtonFadeDuration = 1f;
+
+    private Coroutine sumFadeCoroutine;
+    private Coroutine gameStartButtonFadeCoroutine;
 
     private void Start()
     {
         BindSceneObjects();
-        InitializeUiState();
+        InitializeFadeTarget(sumCanvasGroup, false);
+        InitializeFadeTarget(gameStartButtonCanvasGroup, true);
         PlayBgm();
-        StartCoroutine(PlayIntroSequence());
+
+        sumFadeCoroutine = StartCoroutine(FadeInAfterDelay(sumCanvasGroup, sumDelay, sumFadeDuration, false));
+        gameStartButtonFadeCoroutine = StartCoroutine(FadeInAfterDelay(gameStartButtonCanvasGroup, gameStartButtonDelay, gameStartButtonFadeDuration, true));
+    }
+
+    private void OnDisable()
+    {
+        StopFadeCoroutine(ref sumFadeCoroutine);
+        StopFadeCoroutine(ref gameStartButtonFadeCoroutine);
     }
 
     private void BindSceneObjects()
@@ -41,27 +53,25 @@ public class MainSceneTitleIntroController : MonoBehaviour
             titlePanel = uiRoot.Find("TitlePanel");
         }
 
-        if (titlePanel != null)
+        if (titlePanel == null)
         {
-            if (summaryCanvasGroup == null)
-            {
-                Transform summary = titlePanel.Find("Summary");
-                summaryCanvasGroup = EnsureCanvasGroup(summary);
-            }
+            return;
+        }
 
-            if (gameStartButtonCanvasGroup == null || gameStartButton == null)
-            {
-                Transform buttonTransform = titlePanel.Find("GameStartBtn");
-                if (gameStartButtonCanvasGroup == null)
-                {
-                    gameStartButtonCanvasGroup = EnsureCanvasGroup(buttonTransform);
-                }
+        if (sumCanvasGroup == null)
+        {
+            sumCanvasGroup = EnsureCanvasGroup(titlePanel.Find("Sum"));
+        }
 
-                if (gameStartButton == null && buttonTransform != null)
-                {
-                    gameStartButton = buttonTransform.GetComponent<Button>();
-                }
-            }
+        Transform gameStartButtonTransform = titlePanel.Find("GameStartBtn");
+        if (gameStartButtonCanvasGroup == null)
+        {
+            gameStartButtonCanvasGroup = EnsureCanvasGroup(gameStartButtonTransform);
+        }
+
+        if (gameStartButton == null && gameStartButtonTransform != null)
+        {
+            gameStartButton = gameStartButtonTransform.GetComponent<Button>();
         }
 
         if (bgmAudioSource == null)
@@ -90,25 +100,17 @@ public class MainSceneTitleIntroController : MonoBehaviour
         return canvasGroup;
     }
 
-    private void InitializeUiState()
+    private void InitializeFadeTarget(CanvasGroup canvasGroup, bool lockInteraction)
     {
-        SetCanvasGroup(summaryCanvasGroup, 0f, true, false);
-        SetCanvasGroup(gameStartButtonCanvasGroup, 0f, false, false);
-
-        if (summaryCanvasGroup != null)
+        if (canvasGroup == null)
         {
-            summaryCanvasGroup.gameObject.SetActive(true);
+            return;
         }
 
-        if (gameStartButtonCanvasGroup != null)
-        {
-            gameStartButtonCanvasGroup.gameObject.SetActive(true);
-        }
-
-        if (gameStartButton != null)
-        {
-            gameStartButton.interactable = false;
-        }
+        canvasGroup.gameObject.SetActive(true);
+        canvasGroup.alpha = 0f;
+        canvasGroup.interactable = !lockInteraction;
+        canvasGroup.blocksRaycasts = !lockInteraction;
     }
 
     private void PlayBgm()
@@ -127,52 +129,44 @@ public class MainSceneTitleIntroController : MonoBehaviour
         }
     }
 
-    private IEnumerator PlayIntroSequence()
+    private IEnumerator FadeInAfterDelay(CanvasGroup canvasGroup, float delay, float duration, bool unlockInteraction)
     {
-        yield return new WaitForSeconds(summaryDelay);
-        yield return FadeCanvasGroup(summaryCanvasGroup, 0f, 1f, summaryFadeDuration);
-        SetCanvasGroup(summaryCanvasGroup, 1f, true, true);
+        yield return new WaitForSeconds(delay);
 
-        float buttonWait = Mathf.Max(0f, gameStartButtonDelay - summaryDelay - summaryFadeDuration);
-        yield return new WaitForSeconds(buttonWait);
-        yield return FadeCanvasGroup(gameStartButtonCanvasGroup, 0f, 1f, gameStartButtonFadeDuration);
-        SetCanvasGroup(gameStartButtonCanvasGroup, 1f, true, true);
-
-        if (gameStartButton != null)
-        {
-            gameStartButton.interactable = true;
-        }
-    }
-
-    private IEnumerator FadeCanvasGroup(CanvasGroup canvasGroup, float fromAlpha, float toAlpha, float duration)
-    {
         if (canvasGroup == null)
         {
             yield break;
         }
 
         float elapsed = 0f;
-        SetCanvasGroup(canvasGroup, fromAlpha, false, false);
         while (elapsed < duration)
         {
             elapsed += Time.deltaTime;
             float progress = duration <= 0f ? 1f : Mathf.Clamp01(elapsed / duration);
-            SetCanvasGroup(canvasGroup, Mathf.Lerp(fromAlpha, toAlpha, progress), false, false);
+            canvasGroup.alpha = Mathf.Lerp(0f, 1f, progress);
             yield return null;
         }
 
-        SetCanvasGroup(canvasGroup, toAlpha, false, false);
+        canvasGroup.alpha = 1f;
+        if (unlockInteraction)
+        {
+            canvasGroup.interactable = true;
+            canvasGroup.blocksRaycasts = true;
+            if (gameStartButton != null)
+            {
+                gameStartButton.interactable = true;
+            }
+        }
     }
 
-    private void SetCanvasGroup(CanvasGroup canvasGroup, float alpha, bool interactable, bool blocksRaycasts)
+    private void StopFadeCoroutine(ref Coroutine fadeCoroutine)
     {
-        if (canvasGroup == null)
+        if (fadeCoroutine == null)
         {
             return;
         }
 
-        canvasGroup.alpha = alpha;
-        canvasGroup.interactable = interactable;
-        canvasGroup.blocksRaycasts = blocksRaycasts;
+        StopCoroutine(fadeCoroutine);
+        fadeCoroutine = null;
     }
 }
