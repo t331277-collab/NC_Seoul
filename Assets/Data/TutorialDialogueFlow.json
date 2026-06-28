@@ -360,13 +360,93 @@
       "text": "훌륭합니다! 조선총독부가 철거되고 경복궁의 본모습을 되찾기 위한 첫걸음이 시작되었습니다.",
       "lockInput": true,
       "onCompleteSetFlag": "destroy_004_done",
-      "next": "destroy_005"
+      "next": "policy_001"
     },
     {
-      "id": "destroy_005",
+      "id": "policy_001",
+      "text": "이제 도시 발전을 가속화하는 '정책 시스템'을 배워볼까요? 화면 하단의 [정책] 버튼을 눌러보세요!",
+      "lockInput": true,
+      "onCompleteSetFlag": "policy_001_done",
+      "next": "wait_policy_btn"
+    },
+    {
+      "id": "wait_policy_btn",
+      "type": "waitForAction",
+      "instruction": "정책 버튼을 누르세요!",
+      "allowedTargetPath": "UI/PolicyBtn",
+      "onActionSetFlag": "policy_btn_clicked",
+      "next": "policy_002"
+    },
+    {
+      "id": "policy_002",
+      "text": "정책 목록에 '전후 주택복구사업' 정책이 보입니다. 전쟁으로 파괴된 주택을 복구하기 위해 주택 건설 비용을 50%나 지원해 주는 멋진 정책이죠!",
+      "lockInput": true,
+      "onCompleteSetFlag": "policy_002_done",
+      "next": "policy_003"
+    },
+    {
+      "id": "policy_003",
+      "text": "정책 항목을 클릭하고 [Yes]를 눌러 정책을 실제로 시행해 보세요!",
+      "lockInput": true,
+      "onCompleteSetFlag": "policy_003_done",
+      "next": "wait_policy_apply"
+    },
+    {
+      "id": "wait_policy_apply",
+      "type": "waitForPolicyApply",
+      "instruction": "전후 주택복구사업 정책을 적용하세요!",
+      "allowedTargetPath": "전후 주택복구사업",
+      "onActionSetFlag": "policy_applied_done",
+      "next": "build_house_001"
+    },
+    {
+      "id": "build_house_001",
+      "text": "훌륭합니다! 정책이 시행되었습니다. 이제 제가 특별 지원금 100원을 지급해 드릴 테니, 지도에서 '강남구'를 누르고 주택가 1, 2, 3을 모두 지어보세요!",
+      "lockInput": true,
+      "onCompleteSetFlag": "build_house_001_done",
+      "next": "wait_build_houses"
+    },
+    {
+      "id": "wait_build_houses",
+      "type": "waitForBuildHouses",
+      "instruction": "강남구에 주택가 1, 2, 3을 모두 건설하세요!",
+      "allowedTargetPath": "GangNamGu",
+      "onActionSetFlag": "houses_built_done",
+      "next": "invest_001"
+    },
+    {
+      "id": "invest_001",
+      "text": "정말 대단합니다! 정책 할인 덕분에 100원으로 세 개의 주택가가 순식간에 들어섰네요.",
+      "lockInput": true,
+      "onCompleteSetFlag": "invest_001_done",
+      "next": "invest_002"
+    },
+    {
+      "id": "invest_002",
+      "text": "마지막으로 건물의 능력을 끌어올리는 '투자 시스템'에 대해 짧게 설명해 드릴게요.",
+      "lockInput": true,
+      "onCompleteSetFlag": "invest_002_done",
+      "next": "invest_003"
+    },
+    {
+      "id": "invest_003",
+      "text": "건물을 누르면 나오는 [투자] 버튼을 통해 자금을 들여 건물의 효과와 수익을 크게 키울 수 있답니다!",
+      "lockInput": true,
+      "onCompleteSetFlag": "invest_003_done",
+      "next": "invest_004"
+    },
+    {
+      "id": "invest_004",
+      "text": "시간이 흘러 건물이 낡으면 [보수] 버튼으로 관리해 주는 것도 잊지 마세요!",
+      "lockInput": true,
+      "onCompleteSetFlag": "invest_004_done",
+      "next": "finale_001"
+    },
+    {
+      "id": "finale_001",
       "text": "이제 정말로 서울을 세계 최고의 일류 도시로 발전시켜 나갈 준비가 완벽히 끝났습니다. {playerName}님, 파이팅!",
       "lockInput": true,
-      "onCompleteSetFlag": "destroy_005_done",
+      "onCompleteSetFlag": "finale_001_done",
       "next": null
     }
   ]

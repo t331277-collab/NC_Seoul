@@ -392,6 +392,11 @@ public class StructureActionManager : MonoBehaviour
         constructionJobs.Add(job);
 
         PlayConstructSfx();
+        if (TutorialDialogueRunner.Instance != null && selectedDefinition != null)
+        {
+            TutorialDialogueRunner.Instance.NotifyStructureBuilt(selectedDefinition.Name, job.RegionName);
+        }
+
         SetBuildPanelActive(false);
         RefreshLinkedUi();
     }

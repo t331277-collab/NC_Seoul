@@ -176,6 +176,11 @@ public class PolicyManager : MonoBehaviour
         PopulateAvailablePolicies();
     }
 
+    public void CloseAllPanels()
+    {
+        ClosePolicyPanel();
+    }
+
     private void ClosePolicyPanel()
     {
         SetActive(policyPanel, false);
@@ -207,6 +212,11 @@ public class PolicyManager : MonoBehaviour
         usedPolicyNames.Add(selectedPolicy.Name);
 
         PlayPolicyAcceptedSfx();
+        if (TutorialDialogueRunner.Instance != null)
+        {
+            TutorialDialogueRunner.Instance.NotifyPolicyApplied(state.PolicyName);
+        }
+
         ClosePolicyChoicePanel();
         PopulateAvailablePolicies();
     }
