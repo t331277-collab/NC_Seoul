@@ -67,16 +67,16 @@ public class ResourceDetailPanelManager : MonoBehaviour
 
         AddBinding(uiRoot, panelContainer, "MoneyPanel", "MoneyPanel");
         AddBinding(uiRoot, panelContainer, "ConveniencePanel", "ConveniencePanel");
-        AddBinding(uiRoot, panelContainer, "PeoplePanel", "PeoplePanel");
+        AddBinding(uiRoot, panelContainer, "PeoplePanel", "PeoplePanel", "PeopleContainer");
         AddBinding(uiRoot, panelContainer, "SciencePanel", "SciencePanel");
         AddBinding(uiRoot, panelContainer, "SciecnePanel", "SciecnePanel");
         AddBinding(uiRoot, panelContainer, "LovePanel", "LovePanel");
     }
 
-    private void AddBinding(Transform uiRoot, Transform panelContainer, string sourceName, string detailName)
+    private void AddBinding(Transform uiRoot, Transform panelContainer, string sourceName, params string[] detailNames)
     {
         Transform sourcePanel = uiRoot.Find(sourceName);
-        Transform detailPanel = panelContainer.Find(detailName);
+        Transform detailPanel = FindFirstChild(panelContainer, detailNames);
         if (sourcePanel == null || detailPanel == null)
         {
             return;
@@ -205,7 +205,32 @@ private void AddListeners()
         if (source != null && target != null)
         {
             target.text = source.text;
+            target.color = source.color;
         }
+    }
+
+    private Transform FindFirstChild(Transform parent, params string[] childNames)
+    {
+        if (parent == null || childNames == null)
+        {
+            return null;
+        }
+
+        for (int i = 0; i < childNames.Length; i += 1)
+        {
+            if (string.IsNullOrEmpty(childNames[i]))
+            {
+                continue;
+            }
+
+            Transform child = parent.Find(childNames[i]);
+            if (child != null)
+            {
+                return child;
+            }
+        }
+
+        return null;
     }
 
     private void SetActive(GameObject target, bool isActive)

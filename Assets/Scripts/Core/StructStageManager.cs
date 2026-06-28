@@ -11,6 +11,9 @@ public class StructStageManager : MonoBehaviour
 {
     private const int InitialYear = 1945;
     private const string IgnoredStructName = "Stru_CommonSense";
+    private const int HouseCapacityMultiplier = 10;
+    private const float PopulationCapacityGrowthFactor = 0.03f;
+    private static readonly Color32 PeopleOverCapacityColor = new Color32(220, 64, 64, 255);
     private const float CutSceneFadeDuration = 1f;
     private const float CutSceneTextInterval = 0.5f;
     private const float CutSceneHoldDuration = 1f;
@@ -41,9 +44,14 @@ public class StructStageManager : MonoBehaviour
     private int money;
     private int convenience;
     private int science;
-    private int people;
+    private int currentPopulation;
+    private int populationCapacity;
+    private int populationGrowthPreview;
+    private int populationCapacityDeltaPreview;
     private int love;
     private StatValues pendingValues;
+    private Color peopleNormalColor = Color.white;
+    private bool hasPeopleNormalColor;
 
     public event Action<int> BeforeYearProduction;
     public event Action<int> AfterYearProduction;
@@ -51,6 +59,10 @@ public class StructStageManager : MonoBehaviour
     public int CurrentYear { get { return currentYear; } }
     public int Money { get { return money; } }
     public int Science { get { return science; } }
+    public int CurrentPopulation { get { return currentPopulation; } }
+    public int PopulationCapacity { get { return populationCapacity; } }
+    public int PopulationGrowthPreview { get { return populationGrowthPreview; } }
+    public int PopulationCapacityDeltaPreview { get { return populationCapacityDeltaPreview; } }
 
     private void Awake()
     {
@@ -169,12 +181,12 @@ private IEnumerator PlayNextYearTransition()
             BeforeYearProduction(currentYear);
         }
 
-        RefreshPendingValues();
+        RefreshPopulationPreview(true);
 
         money += pendingValues.Money;
         convenience += pendingValues.Convenience;
         science += pendingValues.Science;
-        people += pendingValues.People;
+        currentPopulation += pendingValues.People;
         love += pendingValues.Love;
 
         UpdateMainTexts();
@@ -239,6 +251,7 @@ private IEnumerator PlayNextYearTransition()
             scienceTexts = FindStatTexts(uiRoot, "SciecnePanel");
         }
         peopleTexts = FindStatTexts(uiRoot, "PeoplePanel");
+        CapturePeopleNormalColor();
         loveTexts = FindStatTexts(uiRoot, "LovePanel");
 
         structureActionManager = uiRoot.GetComponent<StructureActionManager>();
@@ -289,7 +302,12 @@ private IEnumerator PlayNextYearTransition()
         money = ReadTextNumber(moneyTexts.MainText, 0);
         convenience = ReadTextNumber(convenienceTexts.MainText, 0);
         science = ReadTextNumber(scienceTexts.MainText, 0);
-        people = ReadTextNumber(peopleTexts.MainText, 0);
+        populationCapacity = CalculateCurrentPopulationCapacity();
+        currentPopulation = ReadPopulationText(peopleTexts.MainText, 0);
+        if (currentPopulation <= 0 && populationCapacity > 0)
+        {
+            currentPopulation = Mathf.FloorToInt(populationCapacity * 0.6f);
+        }
         love = ReadTextNumber(loveTexts.MainText, 0);
 
         UpdateMainTexts();
@@ -298,13 +316,27 @@ private IEnumerator PlayNextYearTransition()
 
     public void RefreshPendingValues()
     {
-        pendingValues = CalculateCurrentStructValues();
+        RefreshPopulationPreview(true);
 
-        SetText(moneyTexts.PlusMinusText, FormatPending(pendingValues.Money));
-        SetText(convenienceTexts.PlusMinusText, FormatPending(pendingValues.Convenience));
-        SetText(scienceTexts.PlusMinusText, FormatPending(pendingValues.Science));
-        SetText(peopleTexts.PlusMinusText, FormatPending(pendingValues.People));
-        SetText(loveTexts.PlusMinusText, FormatPending(pendingValues.Love));
+        ClearPlusMinusTexts();
+    }
+
+    private void RefreshPopulationPreview(bool updatePopulationCapacity)
+    {
+        int calculatedCapacity = CalculateCurrentPopulationCapacity();
+        populationCapacityDeltaPreview = calculatedCapacity - populationCapacity;
+        if (updatePopulationCapacity)
+        {
+            populationCapacity = calculatedCapacity;
+        }
+
+        pendingValues = CalculateCurrentStructValues();
+        populationGrowthPreview = CalculatePopulationGrowth(convenience, currentPopulation, calculatedCapacity);
+        pendingValues.People = populationGrowthPreview;
+        pendingValues.Money += CalculatePopulationMoneyBonus(currentPopulation, calculatedCapacity);
+        pendingValues.Convenience -= CalculateOverCapacityConveniencePenalty(currentPopulation, calculatedCapacity);
+
+        UpdateMainTexts();
     }
 
     private StatValues CalculateCurrentStructValues()
@@ -357,7 +389,6 @@ private IEnumerator PlayNextYearTransition()
         }
 
         total.Money += values.Money;
-        total.People += values.People;
         total.Science += values.Science;
         total.Love += values.Love;
         total.Convenience += values.Convenience;
@@ -376,10 +407,91 @@ private IEnumerator PlayNextYearTransition()
         }
 
         total.Money += definition.MoneyProduction;
-        total.People += definition.PeopleIncrease;
         total.Science += definition.ScienceIncrease;
         total.Love += definition.LoveIncrease;
         total.Convenience += definition.ConvenienceIncrease;
+    }
+
+    private int CalculateCurrentPopulationCapacity()
+    {
+        if (seoulRoot == null)
+        {
+            return 0;
+        }
+
+        return CalculatePopulationCapacityRecursive(seoulRoot);
+    }
+
+    private int CalculatePopulationCapacityRecursive(Transform parent)
+    {
+        int total = 0;
+        foreach (Transform child in parent)
+        {
+            total += GetStructurePopulationCapacity(child);
+            total += CalculatePopulationCapacityRecursive(child);
+        }
+
+        return total;
+    }
+
+    private int GetStructurePopulationCapacity(Transform target)
+    {
+        if (target == null ||
+            !target.gameObject.activeInHierarchy ||
+            target.name == IgnoredStructName ||
+            !IsHouseStructureName(target.name) ||
+            !structDefinitions.TryGetValue(target.name, out StructDefinitionData definition))
+        {
+            return 0;
+        }
+
+        int baseCapacity = Mathf.Max(0, definition.PeopleIncrease) * HouseCapacityMultiplier;
+        float multiplier;
+        if (structureActionManager != null && structureActionManager.TryGetProductionMultiplier(target.gameObject, out multiplier))
+        {
+            baseCapacity = Mathf.CeilToInt(baseCapacity * multiplier);
+        }
+
+        return baseCapacity;
+    }
+
+    private bool IsHouseStructureName(string structureName)
+    {
+        return structureName == "House1" ||
+               structureName == "House2" ||
+               structureName == "House3" ||
+               structureName == "House4";
+    }
+
+    private int CalculatePopulationGrowth(int convenienceValue, int populationValue, int capacityValue)
+    {
+        if (capacityValue <= 0)
+        {
+            return 0;
+        }
+
+        float occupancyRate = (float)populationValue / capacityValue;
+        if (occupancyRate >= 1f)
+        {
+            return 0;
+        }
+
+        int baseGrowth = Mathf.CeilToInt(Mathf.Max(0, convenienceValue) * 0.015f);
+        int capacityGrowth = Mathf.CeilToInt(capacityValue * PopulationCapacityGrowthFactor);
+        float capacityPressure = Mathf.Clamp01((1f - occupancyRate) / 0.4f);
+        return Mathf.Max(0, Mathf.CeilToInt(baseGrowth * capacityPressure) + capacityGrowth);
+    }
+
+    private int CalculatePopulationMoneyBonus(int populationValue, int capacityValue)
+    {
+        int effectivePopulation = capacityValue <= 0 ? 0 : Mathf.Min(populationValue, capacityValue);
+        return Mathf.FloorToInt(effectivePopulation * 0.02f);
+    }
+
+    private int CalculateOverCapacityConveniencePenalty(int populationValue, int capacityValue)
+    {
+        int overCapacity = Mathf.Max(0, populationValue - capacityValue);
+        return Mathf.CeilToInt(overCapacity * 0.1f);
     }
 
     private StatValues Multiply(StatValues values, float multiplier)
@@ -394,11 +506,12 @@ private IEnumerator PlayNextYearTransition()
 
     private void UpdateMainTexts()
     {
-        SetText(moneyTexts.MainText, money.ToString());
-        SetText(convenienceTexts.MainText, convenience.ToString());
-        SetText(scienceTexts.MainText, science.ToString());
-        SetText(peopleTexts.MainText, people.ToString());
-        SetText(loveTexts.MainText, love.ToString());
+        SetText(moneyTexts.MainText, FormatValueWithPending(money, pendingValues.Money));
+        SetText(convenienceTexts.MainText, FormatValueWithPending(convenience, pendingValues.Convenience));
+        SetText(scienceTexts.MainText, FormatValueWithPending(science, pendingValues.Science));
+        SetText(peopleTexts.MainText, FormatPeopleValue());
+        UpdatePeopleTextColor();
+        SetText(loveTexts.MainText, FormatValueWithPending(love, pendingValues.Love));
     }
 
     private void UpdateYearText()
@@ -450,12 +563,94 @@ private IEnumerator PlayNextYearTransition()
         }
 
         string value = text.text.Trim();
+        if (value.Contains("/"))
+        {
+            value = value.Split('/')[0].Trim();
+        }
+
+        value = ExtractFirstIntegerText(value);
         if (int.TryParse(value, out int parsedValue))
         {
             return parsedValue;
         }
 
         return fallback;
+    }
+
+    private string ExtractFirstIntegerText(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        StringBuilder builder = new StringBuilder();
+        bool hasDigit = false;
+        for (int i = 0; i < value.Length; i += 1)
+        {
+            char c = value[i];
+            if (char.IsDigit(c))
+            {
+                builder.Append(c);
+                hasDigit = true;
+                continue;
+            }
+
+            if (c == '-' && !hasDigit && builder.Length == 0)
+            {
+                builder.Append(c);
+                continue;
+            }
+
+            if (c == ',')
+            {
+                continue;
+            }
+
+            if (hasDigit)
+            {
+                break;
+            }
+
+            if (builder.Length == 1 && builder[0] == '-')
+            {
+                builder.Length = 0;
+            }
+        }
+
+        return hasDigit ? builder.ToString() : string.Empty;
+    }
+
+    private int ReadPopulationText(TextMeshProUGUI text, int fallback)
+    {
+        return ReadTextNumber(text, fallback);
+    }
+
+    private void CapturePeopleNormalColor()
+    {
+        if (hasPeopleNormalColor || peopleTexts.MainText == null)
+        {
+            return;
+        }
+
+        peopleNormalColor = peopleTexts.MainText.color;
+        hasPeopleNormalColor = true;
+    }
+
+    private void UpdatePeopleTextColor()
+    {
+        if (peopleTexts.MainText == null)
+        {
+            return;
+        }
+
+        if (populationCapacity > 0 && currentPopulation > populationCapacity)
+        {
+            peopleTexts.MainText.color = PeopleOverCapacityColor;
+            return;
+        }
+
+        peopleTexts.MainText.color = peopleNormalColor;
     }
 
     private void SetText(TextMeshProUGUI text, string value)
@@ -474,6 +669,28 @@ private IEnumerator PlayNextYearTransition()
         }
 
         return value.ToString();
+    }
+
+    private string FormatValueWithPending(int currentValue, int pendingValue)
+    {
+        return currentValue.ToString() + "(" + FormatPending(pendingValue) + ")";
+    }
+
+    private string FormatPeopleValue()
+    {
+        return currentPopulation.ToString()
+               + "(" + FormatPending(pendingValues.People) + ") / "
+               + populationCapacity.ToString()
+               + " (" + FormatPending(populationCapacityDeltaPreview) + ")";
+    }
+
+    private void ClearPlusMinusTexts()
+    {
+        SetText(moneyTexts.PlusMinusText, string.Empty);
+        SetText(convenienceTexts.PlusMinusText, string.Empty);
+        SetText(scienceTexts.PlusMinusText, string.Empty);
+        SetText(peopleTexts.PlusMinusText, string.Empty);
+        SetText(loveTexts.PlusMinusText, string.Empty);
     }
 
     private struct StatTexts

@@ -111,7 +111,7 @@ public class UIManager : MonoBehaviour
         MoveCameraToRegion(regionName);
     }
 
-    private string GetRegionDisplayName(string regionName)
+    public string GetRegionDisplayName(string regionName)
     {
         if (regionDisplayNames.TryGetValue(regionName, out string displayName))
         {

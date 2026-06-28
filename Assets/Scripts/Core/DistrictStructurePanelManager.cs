@@ -8,6 +8,7 @@ using UnityEngine.UI;
 public class DistrictStructurePanelManager : MonoBehaviour
 {
     private const string IgnoredStructName = "Stru_CommonSense";
+    private const int HouseCapacityMultiplier = 10;
     private const float ContentTopPadding = 16f;
     private const string DistrictNameToken = "{\uC9C0\uC5ED\uC774\uB984}";
     private const string DistrictOfficeSuffix = "\uAD6C\uCCAD";
@@ -394,7 +395,7 @@ public class DistrictStructurePanelManager : MonoBehaviour
         string displayName = ResolveDisplayName(definition);
 
         SetText(FindText(itemObject.transform, "StruName"), displayName);
-        SetText(FindText(itemObject.transform, "People"), definition.People.ToString());
+        SetText(FindText(itemObject.transform, "People"), FormatPopulationCapacityText(structureTransform, definition));
         SetText(FindText(itemObject.transform, "Money"), definition.Money.ToString());
         SetText(FindText(itemObject.transform, "Convenience"), definition.Convenience.ToString());
         SetText(FindText(itemObject.transform, "Science"), definition.Science.ToString());
@@ -410,6 +411,47 @@ public class DistrictStructurePanelManager : MonoBehaviour
         }
 
         items.Add(itemObject);
+    }
+
+    private string FormatPopulationCapacityText(Transform structureTransform, StructDefinitionData definition)
+    {
+        int capacity = CalculateStructurePopulationCapacity(structureTransform, definition);
+        if (capacity <= 0)
+        {
+            return "-";
+        }
+
+        return "+" + capacity.ToString();
+    }
+
+    private int CalculateStructurePopulationCapacity(Transform structureTransform, StructDefinitionData definition)
+    {
+        if (definition == null || !IsHouseStructureName(definition.Name))
+        {
+            return 0;
+        }
+
+        int capacity = Mathf.Max(0, definition.PeopleIncrease) * HouseCapacityMultiplier;
+        if (structureTransform == null)
+        {
+            return capacity;
+        }
+
+        StructureInvestmentState investmentState = structureTransform.GetComponent<StructureInvestmentState>();
+        if (investmentState != null)
+        {
+            capacity = Mathf.CeilToInt(capacity * investmentState.RefreshCurrentStatMultiplier());
+        }
+
+        return capacity;
+    }
+
+    private bool IsHouseStructureName(string structureName)
+    {
+        return structureName == "House1" ||
+               structureName == "House2" ||
+               structureName == "House3" ||
+               structureName == "House4";
     }
 
     private void BindItemButton(GameObject itemObject, StructDefinitionData definition)

@@ -19,6 +19,9 @@ public class StructureInvestmentState : MonoBehaviour
     public int pendingResolveYear;
     public int pendingCost;
     public float pendingSuccessChance;
+    public string pendingRegionName;
+    public string pendingRegionDisplayName;
+    public string pendingStructureDisplayName;
 
     public bool lastInvestmentSucceeded;
     public int lastResolvedYear;

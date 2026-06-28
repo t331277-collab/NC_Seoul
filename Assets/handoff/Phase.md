@@ -1,5 +1,54 @@
 # Phase
 
+## 2026-06-28 - Infor Event Notifications
+
+- Role: Code Builder
+- Status: Completed
+- Scope: `UI/Infor` alert entry point and `UI/InforPanel` event list for yearly structure events.
+- Implemented:
+  - Added `InfoNotificationManager`.
+  - On construction complete, investment success, investment failure, and demolition complete, `UI/Infor/TXT` is hidden and `UI/Infor/Image` animates to anchored position `(38, -3.2)` over 0.5 seconds.
+  - Clicking `UI/Infor` opens `UI/InforPanel`.
+  - Notifications clone `UI/InforPanel/Content/Template`, write state text into `Statue`, and write event detail text into `Desc`.
+  - Notification item clicks call `UIManager.ShowTerrainPanel(...)`, matching normal district click behavior.
+  - Investment pending data now stores region/display names so next-year result messages use the original target.
+- Verified:
+  - `dotnet build .\Assembly-CSharp.csproj --no-restore` completed with 0 errors.
+  - Unity-MCP path check found `Infor`, `Image`, `TXT`, `InforPanel`, and `Content/Template`.
+
+## 2026-06-28 - Inline Resource Next-Turn Values
+
+- Role: Code Builder
+- Status: Completed
+- Scope: Resource UI text formatting in `StructStageManager`.
+- Implemented:
+  - `PlusMinus` texts are no longer used and are cleared every refresh.
+  - Money, Convenience, Science, and Love now display as `current(+nextTurnDelta)`.
+  - People now displays as `current(+nextTurnPopulation) / capacity (+nextTurnCapacity)`.
+  - `PanelContainer` resource detail panels inherit the same display through `ResourceDetailPanelManager` text sync.
+
+## 2026-06-28 - Population Growth Capacity Bonus
+
+- Role: Code Builder
+- Status: Completed
+- Scope: Population growth formula in `StructStageManager`.
+- Implemented:
+  - Added `PopulationCapacityGrowthFactor = 0.07f`.
+  - Current population growth now keeps the existing convenience-based growth and additionally adds `ceil(total population capacity * 0.07)`.
+  - Growth still returns `0` when current population is already at or above capacity.
+
+## 2026-06-28 - Population Capacity Landmark Balance Counterproposal Refresh
+
+- Role: Code Builder
+- Status: Completed
+- Scope: `PopulationCapacityBalanceCounterproposal.md` update using current active buildings under `InGameScene/Seoul`.
+- Updated:
+  - Rebased the balance check on the current active Seoul buildings: H1 8, H2 5, H3 6, H4 8, capacity 1220, initial population 732.
+  - Recorded current active production: money 62, science 30, convenience 144, love 65.
+  - Recorded active landmarks: 11 / 35, with build-order entries 1~9 already active plus `암사동유적지` and `길상사`.
+  - Added a no-investment 1945~2026 build-order simulation using `Assets/TXT/건물 건축 순서.txt` and `Assets/Data/StructDefinition.csv`.
+  - Recommended keeping current CSV if "most landmarks by 2026" means 26 / 35 completed or owned, and noted cost-only tuning if the target is 30 / 35+.
+
 ## 2026-06-27 - CurStruc Action Buttons
 
 - Role: Code Builder
@@ -379,3 +428,122 @@
   - Normal play can still feel different from the simulator because player choices vary.
   - Use DebugBtn or repeated `NextYearBtn` testing if manual validation is needed.
   - Report if house 10-success feels too late or high-resource unique structures feel impossible in actual play.
+
+
+## 2026-06-28 - Population Capacity Rework Steps 1-3 Implementation
+
+- Role: Code Builder
+- Status: Completed
+- Scope: `PopulationCapacityRework_Handoff.md` implementation direction steps 1-3
+- Implemented:
+  - Updated `Assets/Scripts/Core/StructStageManager.cs`.
+  - Replaced the old single `people` runtime meaning with `currentPopulation`.
+  - Added `populationCapacity`, `populationGrowthPreview`, and `populationCapacityDeltaPreview`.
+  - Added public read-only accessors for current population, population capacity, population growth preview, and capacity delta preview.
+  - Added active `House1~House4` population capacity calculation using CSV `PeopleIncrease * 10`.
+  - Applied existing `StructureActionManager.TryGetProductionMultiplier(...)` multiplier to house capacity, so successful house investment can raise capacity.
+  - Changed yearly population behavior so CSV `PeopleIncrease` is no longer added directly as yearly population production.
+  - Added convenience-based current population growth.
+  - Added current-population-based money bonus.
+  - Added over-capacity convenience penalty.
+  - Changed `PeoplePanel` main text to `currentPopulation / populationCapacity`.
+  - Changed `PeoplePanel/PlusMinus` text to `populationGrowth / capacityDelta`.
+  - Added red `PeoplePanel` main text when current population exceeds population capacity.
+  - Added parsing support for existing `current / capacity` people text so scene values can be reloaded.
+- Verified:
+  - `dotnet build .\Assembly-CSharp.csproj --no-restore` completed with `0` errors.
+  - Existing warnings remain: Unity reference version conflicts, deprecated Unity object lookup APIs, and pre-existing unused fields.
+- User Play-Mode verification needed:
+  - Scene: `InGameScene`.
+  - Confirm `PeoplePanel` displays `current / capacity`.
+  - Confirm `PeoplePanel/PlusMinus` displays `population growth / capacity delta`.
+  - Press `NextYearBtn` and confirm population increases from convenience rather than directly from building `PeopleIncrease`.
+  - Confirm yearly money gain includes a population bonus.
+  - Force or reach over-capacity and confirm `PeoplePanel` turns red and `ConveniencePanel/PlusMinus` includes a negative over-capacity penalty.
+
+
+## 2026-06-28 - Population Capacity Rework Steps 4-6 Implementation
+
+- Role: Code Builder
+- Status: Completed
+- Scope: `PopulationCapacityRework_Handoff.md` implementation direction steps 4-6
+- Implemented:
+  - Confirmed `StructStageManager.CalculateCurrentStructValues()` no longer adds CSV `PeopleIncrease` as yearly current-population production.
+  - Confirmed yearly apply path uses population growth, population money bonus, and over-capacity convenience penalty.
+  - Confirmed `PeoplePanel/Text (TMP)` displays `currentPopulation / populationCapacity`.
+  - Confirmed `PeoplePanel/PlusMinus` displays `populationGrowth / populationCapacityDelta`.
+  - Confirmed over-capacity state turns `PeoplePanel/Text (TMP)` red.
+  - Updated `ResourceDetailPanelManager` so the People detail binding accepts either `PanelContainer/PeoplePanel` or future `PanelContainer/PeopleContainer`.
+  - Updated resource detail text sync to copy text color as well as text, so People over-capacity red state is reflected in the detail panel.
+- Scene hierarchy note:
+  - Current `InGameScene` contains `UI/PanelContainer/PeoplePanel`; no `PeopleContainer` GameObject was found by text scan.
+  - The code now supports both names without requiring a scene rename.
+- Verified:
+  - `dotnet build .\Assembly-CSharp.csproj --no-restore` completed with `0` errors.
+  - Existing warnings remain: Unity reference version conflicts, deprecated Unity object lookup APIs, and pre-existing unused fields.
+- User Play-Mode verification needed:
+  - Scene: `InGameScene`.
+  - Open People resource detail from `PeoplePanel`.
+  - Confirm detail panel shows the same `current / capacity` and `population growth / capacity delta` values as the top-level PeoplePanel.
+  - Force or reach over-capacity and confirm the detail panel also reflects the red People text color.
+
+
+## 2026-06-28 - Population Capacity Rework Steps 7-8 Implementation
+
+- Role: Code Builder
+- Status: Completed
+- Scope: `PopulationCapacityRework_Handoff.md` implementation direction steps 7-8
+- Implemented:
+  - Updated `Assets/Scripts/Core/DistrictStructurePanelManager.cs`.
+  - Current/buildable structure row `People` text now shows population capacity contribution for `House1~House4`.
+  - House row capacity uses CSV `PeopleIncrease * 10`.
+  - Active/invested house rows apply `StructureInvestmentState.RefreshCurrentStatMultiplier()` to row capacity.
+  - Non-house rows show `-` in the `People` cell for v0 to avoid implying direct yearly population production.
+  - Updated `Assets/Scripts/Core/StructStageManager.cs`.
+  - `ReadTextNumber(...)` now extracts the first integer from label-style text, so existing or future values like `현재 인구: 1,044 / 1,740` can be migrated by reading the left-side current-population value.
+- Verified:
+  - `dotnet build .\Assembly-CSharp.csproj --no-restore` completed with `0` errors.
+  - Existing warnings remain: Unity reference version conflicts, deprecated Unity object lookup APIs, and pre-existing unused fields.
+- User Play-Mode verification needed:
+  - Scene: `InGameScene`.
+  - Open `CurStruc` and `CanBuildStruc` for a district containing `House1~House4`.
+  - Confirm house row `People` cells show capacity values such as `+30`, `+40`, `+50`, or `+60`, adjusted upward if that active house has investment successes.
+  - Confirm non-house row `People` cells show `-`.
+  - Confirm `PeoplePanel` still initializes correctly from either a single number or `current / capacity` text.
+
+
+## 2026-06-28 - Population Capacity Rework Step 9 Balance Verification
+
+- Role: Code Builder
+- Status: Completed
+- Scope: `PopulationCapacityRework_Handoff.md` implementation direction step 9
+- Performed:
+  - Ran Unity-MCP editor code against active `Assets/Scenes/InGameScene.unity`.
+  - Counted active/inactive `House1~House4`.
+  - Calculated current scene population capacity.
+  - Calculated runtime initial current population from the current `PeoplePanel` migration rule.
+  - Verified convenience-based population growth, population money bonus, over-capacity convenience penalty, and house investment capacity milestones.
+  - Simulated no-new-housing population pacing from 1945 to 2050.
+- Verification results:
+  - Active houses: `House1=9`, `House2=7`, `House3=6`, `House4=10`, total `32`.
+  - Inactive houses: `House1=16`, `House2=18`, `House3=19`, `House4=14`, total `67`.
+  - Current capacity: `1450`.
+  - Runtime initial population from `capacity * 0.6`: `870`.
+  - Active-scene annual production before population bonus: money `69`, convenience `196`, science `41`, love `74`.
+  - Initial population growth using annual convenience `196`: `+3`.
+  - Initial money bonus: `+17`.
+  - Over-capacity by `110` produces convenience penalty `-11` and population growth `0`.
+  - `House1` capacity milestones: base `30`, 5 successes `60`, 10 successes `120`.
+  - No-new-housing simulation reaches full capacity around `1988`.
+- Balance finding:
+  - Formula behavior is not broken.
+  - Current scene does not match the handoff example baseline of capacity `1740` and initial population `1044`.
+  - Current scene baseline is capacity `1450` and initial population `870`.
+- Created:
+  - `Assets/handoff/PopulationCapacityBalanceCounterproposal.md`
+  - `Assets/handoff/PopulationCapacityBalanceCounterproposal.md.meta`
+- Recommendation:
+  - Prefer counterproposal A: adopt the current scene baseline `870 / 1450` and update the handoff examples.
+  - If the desired opening value must remain `1044 / 1740`, use counterproposal B: raise the house capacity multiplier from `10` to `12`.
+- User decision needed:
+  - Choose whether to adopt current scene baseline, change multiplier, or provide a specific list of houses to activate.

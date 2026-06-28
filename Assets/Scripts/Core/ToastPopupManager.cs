@@ -5,6 +5,8 @@ using UnityEngine;
 public class ToastPopupManager : MonoBehaviour
 {
     private const string MoneyShortageMessage = "돈이 모자랍니다!";
+    private const string ScienceShortageMessage = "기술력이 모자랍니다!";
+    private const string ScienceAndMoneyShortageMessage = "기술력, 돈이 모자릅니다!";
 
     [SerializeField] private string toastPath = "ToastPopUp";
     [SerializeField] private string textPath = "TXT";
@@ -29,6 +31,16 @@ public class ToastPopupManager : MonoBehaviour
     public void ShowMoneyShortage()
     {
         Show(MoneyShortageMessage);
+    }
+
+    public void ShowScienceShortage()
+    {
+        Show(ScienceShortageMessage);
+    }
+
+    public void ShowScienceAndMoneyShortage()
+    {
+        Show(ScienceAndMoneyShortageMessage);
     }
 
     public void Show(string message)

@@ -36,6 +36,8 @@ public class StructureActionManager : MonoBehaviour
     private StructStageManager stageManager;
     private DistrictStructurePanelManager districtPanelManager;
     private ToastPopupManager toastPopupManager;
+    private InfoNotificationManager infoNotificationManager;
+    private UIManager uiManager;
     private GameObject buildPanel;
     private TextMeshProUGUI buildNameText;
     private TextMeshProUGUI buildDescText;
@@ -155,7 +157,7 @@ public class StructureActionManager : MonoBehaviour
         SelectStructure(targetObject, definition, displayName, sourcePanelManager);
 
         SetText(buildNameText, ReplaceToken(buildNameTemplate, "{StruName}", selectedDisplayName));
-        SetText(buildDescText, ReplaceToken(buildDescTemplate, "{InvestAmont}", FormatMoneyK(definition.BuildCost)));
+        SetText(buildDescText, BuildBuildDescription(definition));
         SetText(buildYearText, ReplaceToken(buildYearTemplate, "{\uAC74\uC124\uC2DC\uAC04}", definition.BuildYears.ToString()));
 
         if (confirmBuildButton != null)
@@ -356,6 +358,15 @@ public class StructureActionManager : MonoBehaviour
             return;
         }
 
+        bool lacksScience = stageManager.Science < selectedDefinition.UnlockScience;
+        bool lacksMoney = stageManager.Money < selectedDefinition.BuildCost;
+        if (lacksScience || lacksMoney)
+        {
+            ShowBuildRequirementShortageToast(lacksScience, lacksMoney);
+            Debug.LogWarning("Not enough requirements to build " + selectedDefinition.Name + ". CurrentScience=" + stageManager.Science + ", RequiredScience=" + selectedDefinition.UnlockScience + ", CurrentMoney=" + stageManager.Money + ", RequiredMoney=" + selectedDefinition.BuildCost + ".");
+            return;
+        }
+
         if (!stageManager.TrySpendMoney(selectedDefinition.BuildCost))
         {
             ShowMoneyShortageToast();
@@ -365,7 +376,11 @@ public class StructureActionManager : MonoBehaviour
 
         ConstructionJob job = new ConstructionJob();
         job.RegionPath = selectedTarget.transform.parent == null ? string.Empty : GetPath(selectedTarget.transform.parent);
+        job.RegionName = GetRegionName(selectedTarget);
+        job.RegionDisplayName = GetRegionDisplayName(job.RegionName);
+        job.RegionTransform = FindRegionTransform(selectedTarget.transform);
         job.StructureKey = selectedDefinition.Name;
+        job.StructureDisplayName = selectedDisplayName;
         job.TargetObject = selectedTarget;
         job.RemainingYears = Mathf.Max(1, selectedDefinition.BuildYears);
         job.WorkVisualObject = CreateConstructionWorkVisual(selectedTarget);
@@ -413,6 +428,9 @@ public class StructureActionManager : MonoBehaviour
         investmentState.pendingResolveYear = stageManager.CurrentYear + 1;
         investmentState.pendingCost = investCost;
         investmentState.pendingSuccessChance = GetInvestmentSuccessChance(selectedDefinition, investmentState);
+        investmentState.pendingRegionName = GetRegionName(selectedTarget);
+        investmentState.pendingRegionDisplayName = GetRegionDisplayName(investmentState.pendingRegionName);
+        investmentState.pendingStructureDisplayName = selectedDisplayName;
 
         SetStructureActionPanelsActive(false);
         RefreshLinkedUi();
@@ -459,6 +477,10 @@ public class StructureActionManager : MonoBehaviour
 
         DemolitionJob job = new DemolitionJob();
         job.TargetObject = selectedTarget;
+        job.RegionName = GetRegionName(selectedTarget);
+        job.RegionDisplayName = GetRegionDisplayName(job.RegionName);
+        job.RegionTransform = FindRegionTransform(selectedTarget == null ? null : selectedTarget.transform);
+        job.StructureDisplayName = selectedDisplayName;
         job.RemainingYears = 1;
         job.WorkVisualObject = CreateConstructionWorkVisual(selectedTarget);
         demolitionJobs.Add(job);
@@ -481,6 +503,33 @@ public class StructureActionManager : MonoBehaviour
         {
             toastPopupManager.ShowMoneyShortage();
         }
+    }
+
+    private void ShowBuildRequirementShortageToast(bool lacksScience, bool lacksMoney)
+    {
+        if (toastPopupManager == null)
+        {
+            BindSceneObjects();
+        }
+
+        if (toastPopupManager == null)
+        {
+            return;
+        }
+
+        if (lacksScience && lacksMoney)
+        {
+            toastPopupManager.ShowScienceAndMoneyShortage();
+            return;
+        }
+
+        if (lacksScience)
+        {
+            toastPopupManager.ShowScienceShortage();
+            return;
+        }
+
+        toastPopupManager.ShowMoneyShortage();
     }
 
     private StructureInvestmentState GetInvestmentState(GameObject targetObject)
@@ -635,6 +684,7 @@ public class StructureActionManager : MonoBehaviour
                     job.TargetObject.SetActive(true);
                 }
 
+                ShowConstructionCompleteNotification(job);
                 constructionJobs.RemoveAt(i);
                 completedAny = true;
             }
@@ -666,6 +716,7 @@ public class StructureActionManager : MonoBehaviour
                     job.TargetObject.SetActive(false);
                 }
 
+                ShowDemolitionCompleteNotification(job);
                 demolitionJobs.RemoveAt(i);
                 completedAny = true;
             }
@@ -705,6 +756,10 @@ public class StructureActionManager : MonoBehaviour
             investmentState.pendingResolveYear = 0;
             investmentState.pendingCost = 0;
             investmentState.pendingSuccessChance = 0f;
+            ShowInvestmentNotification(investmentState, succeeded);
+            investmentState.pendingRegionName = string.Empty;
+            investmentState.pendingRegionDisplayName = string.Empty;
+            investmentState.pendingStructureDisplayName = string.Empty;
             investmentState.ConfigureForStructureName(investmentState.gameObject.name);
             resolvedAny = true;
 
@@ -712,6 +767,143 @@ public class StructureActionManager : MonoBehaviour
         }
 
         return resolvedAny;
+    }
+
+    private void ShowInvestmentNotification(StructureInvestmentState investmentState, bool succeeded)
+    {
+        if (investmentState == null)
+        {
+            return;
+        }
+
+        string status = succeeded ? "투자 성공" : "투자 실패";
+        string regionName = string.IsNullOrEmpty(investmentState.pendingRegionName) ? GetRegionName(investmentState.gameObject) : investmentState.pendingRegionName;
+        string regionDisplayName = string.IsNullOrEmpty(investmentState.pendingRegionDisplayName) ? GetRegionDisplayName(regionName) : investmentState.pendingRegionDisplayName;
+        string structureDisplayName = string.IsNullOrEmpty(investmentState.pendingStructureDisplayName) ? investmentState.gameObject.name : investmentState.pendingStructureDisplayName;
+        string locationName = FormatLocationName(regionDisplayName, structureDisplayName);
+        string desc = succeeded
+            ? locationName + "의 투자가 성공적으로 진행됐습니다!"
+            : locationName + "의 투자가 실패했습니다.";
+
+        ShowInfoNotification(status, desc, regionName, FindRegionTransform(investmentState.transform));
+    }
+
+    private void ShowConstructionCompleteNotification(ConstructionJob job)
+    {
+        if (job == null)
+        {
+            return;
+        }
+
+        string structureDisplayName = string.IsNullOrEmpty(job.StructureDisplayName) ? job.StructureKey : job.StructureDisplayName;
+        string locationName = FormatLocationName(job.RegionDisplayName, structureDisplayName);
+        bool isHouse = StructureInvestmentState.IsHouseName(job.StructureKey);
+        string desc = isHouse
+            ? locationName + "이 성공적으로 건설되었습니다."
+            : locationName + GetSubjectParticle(structureDisplayName) + " 놀라운 자태를 뽐내며 건설되었습니다!";
+
+        ShowInfoNotification("건설 완료", desc, job.RegionName, job.RegionTransform);
+    }
+
+    private void ShowDemolitionCompleteNotification(DemolitionJob job)
+    {
+        if (job == null)
+        {
+            return;
+        }
+
+        string structureDisplayName = string.IsNullOrEmpty(job.StructureDisplayName) ? (job.TargetObject == null ? string.Empty : job.TargetObject.name) : job.StructureDisplayName;
+        string locationName = FormatLocationName(job.RegionDisplayName, structureDisplayName);
+        string desc = locationName + GetSubjectParticle(structureDisplayName) + " 철거되었습니다.";
+
+        ShowInfoNotification("철거 완료", desc, job.RegionName, job.RegionTransform);
+    }
+
+    private void ShowInfoNotification(string status, string desc, string regionName, Transform regionTransform)
+    {
+        if (infoNotificationManager == null)
+        {
+            BindSceneObjects();
+        }
+
+        if (infoNotificationManager != null)
+        {
+            infoNotificationManager.AddNotification(status, desc, regionName, regionTransform);
+        }
+    }
+
+    private string FormatLocationName(string regionDisplayName, string structureDisplayName)
+    {
+        if (string.IsNullOrEmpty(regionDisplayName))
+        {
+            return structureDisplayName ?? string.Empty;
+        }
+
+        if (string.IsNullOrEmpty(structureDisplayName))
+        {
+            return regionDisplayName;
+        }
+
+        return regionDisplayName + "의 " + structureDisplayName;
+    }
+
+    private string GetSubjectParticle(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return "이";
+        }
+
+        char last = value[value.Length - 1];
+        if (last < '\uAC00' || last > '\uD7A3')
+        {
+            return "이";
+        }
+
+        int jongSung = (last - '\uAC00') % 28;
+        return jongSung == 0 ? "가" : "이";
+    }
+
+    private string GetRegionName(GameObject targetObject)
+    {
+        return targetObject == null ? string.Empty : GetRegionName(targetObject.transform);
+    }
+
+    private string GetRegionName(Transform target)
+    {
+        Transform regionTransform = FindRegionTransform(target);
+        return regionTransform == null ? string.Empty : regionTransform.name;
+    }
+
+    private string GetRegionDisplayName(string regionName)
+    {
+        if (uiManager == null)
+        {
+            uiManager = GetComponent<UIManager>();
+        }
+
+        if (uiManager != null)
+        {
+            return uiManager.GetRegionDisplayName(regionName);
+        }
+
+        return regionName;
+    }
+
+    private Transform FindRegionTransform(Transform target)
+    {
+        Transform current = target;
+        while (current != null && current.parent != null)
+        {
+            if (current.parent.name == "Seoul")
+            {
+                return current;
+            }
+
+            current = current.parent;
+        }
+
+        return null;
     }
 
     private void HandleAfterYearProduction(int currentYear)
@@ -945,6 +1137,17 @@ public class StructureActionManager : MonoBehaviour
         stageManager = GetComponent<StructStageManager>();
         districtPanelManager = GetComponent<DistrictStructurePanelManager>();
         toastPopupManager = GetComponent<ToastPopupManager>();
+        infoNotificationManager = GetComponent<InfoNotificationManager>();
+        if (infoNotificationManager == null)
+        {
+            infoNotificationManager = gameObject.AddComponent<InfoNotificationManager>();
+        }
+
+        uiManager = GetComponent<UIManager>();
+        if (uiManager == null)
+        {
+            uiManager = FindObjectOfType<UIManager>();
+        }
 
         Transform buildPanelTransform = transform.Find(buildPanelPath);
         if (buildPanelTransform != null)
@@ -1108,6 +1311,17 @@ public class StructureActionManager : MonoBehaviour
         }
     }
 
+    private string BuildBuildDescription(StructDefinitionData definition)
+    {
+        if (definition == null)
+        {
+            return string.Empty;
+        }
+
+        string moneyDescription = ReplaceToken(buildDescTemplate, "{InvestAmont}", FormatMoneyK(definition.BuildCost));
+        return moneyDescription + "\n" + definition.UnlockScience.ToString("N0") + " 기술력 요구";
+    }
+
     private string ReadTemplate(TextMeshProUGUI text, string fallback)
     {
         if (text == null || string.IsNullOrEmpty(text.text))
@@ -1190,7 +1404,11 @@ public class StructureActionManager : MonoBehaviour
     private class ConstructionJob
     {
         public string RegionPath;
+        public string RegionName;
+        public string RegionDisplayName;
+        public Transform RegionTransform;
         public string StructureKey;
+        public string StructureDisplayName;
         public GameObject TargetObject;
         public GameObject WorkVisualObject;
         public int RemainingYears;
@@ -1198,6 +1416,10 @@ public class StructureActionManager : MonoBehaviour
 
     private class DemolitionJob
     {
+        public string RegionName;
+        public string RegionDisplayName;
+        public Transform RegionTransform;
+        public string StructureDisplayName;
         public GameObject TargetObject;
         public GameObject WorkVisualObject;
         public int RemainingYears;
