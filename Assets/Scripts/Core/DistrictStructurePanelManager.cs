@@ -39,6 +39,7 @@ public class DistrictStructurePanelManager : MonoBehaviour
     private ScrollRect currentScrollRect;
     private ScrollRect buildableScrollRect;
     private StructureActionManager structureActionManager;
+    private StructureNarratorVoiceRunner narratorVoiceRunner;
     private string selectedRegionDisplayName;
     private Transform selectedRegionTransform;
 
@@ -46,6 +47,11 @@ public class DistrictStructurePanelManager : MonoBehaviour
     {
         BindSceneObjects();
         LoadStructDefinitions();
+        narratorVoiceRunner = GetComponent<StructureNarratorVoiceRunner>();
+        if (narratorVoiceRunner == null)
+        {
+            narratorVoiceRunner = gameObject.AddComponent<StructureNarratorVoiceRunner>();
+        }
         SetPanelActive(currentPanel, false);
         SetPanelActive(buildablePanel, false);
         SetPanelActive(descriptionPanel, false);
@@ -551,12 +557,18 @@ public class DistrictStructurePanelManager : MonoBehaviour
 
         if (descriptionImage == null)
         {
+            if (narratorVoiceRunner != null) narratorVoiceRunner.PlayStructureNarrator(definition.Name);
             return;
         }
 
         Sprite sprite = LoadSprite(definition.ImagePath);
         descriptionImage.sprite = sprite;
         descriptionImage.enabled = sprite != null;
+
+        if (narratorVoiceRunner != null)
+        {
+            narratorVoiceRunner.PlayStructureNarrator(definition.Name);
+        }
     }
 
     private Sprite LoadSprite(string assetPath)
@@ -696,9 +708,13 @@ public class DistrictStructurePanelManager : MonoBehaviour
 
     private void CloseDescriptionPanel()
     {
+        if (narratorVoiceRunner != null) narratorVoiceRunner.StopNarrator();
         SetPanelActive(descriptionPanel, false);
         SetPanelActive(currentPanel, true);
     }
 
-
+    private void OnDisable()
+    {
+        if (narratorVoiceRunner != null) narratorVoiceRunner.StopNarrator();
+    }
 }
