@@ -8,6 +8,7 @@ public class TutorialVoiceSynthesisManager : MonoBehaviour
     private VarcoVoiceClient voiceClient;
     private AudioSource audioSource;
     private Dictionary<string, AudioClip> clipCache = new Dictionary<string, AudioClip>();
+    private bool isDuckingBgm;
 
     private void Awake()
     {
@@ -27,7 +28,19 @@ public class TutorialVoiceSynthesisManager : MonoBehaviour
         {
             audioSource.Stop();
         }
+
+        EndBgmDuck();
         StopAllCoroutines();
+    }
+
+    private void OnDisable()
+    {
+        EndBgmDuck();
+    }
+
+    private void OnDestroy()
+    {
+        EndBgmDuck();
     }
 
     private IEnumerator PlayAndPrefetchRoutine(string text, string nodeId, string nextText, string nextNodeId, SynthesisCompleteHandler onComplete)
@@ -71,11 +84,14 @@ public class TutorialVoiceSynthesisManager : MonoBehaviour
         if (currentClip != null)
         {
             audioSource.clip = currentClip;
+            BeginBgmDuck();
             audioSource.Play();
             while (audioSource.isPlaying)
             {
                 yield return null;
             }
+
+            EndBgmDuck();
         }
         else
         {
@@ -85,5 +101,27 @@ public class TutorialVoiceSynthesisManager : MonoBehaviour
         }
 
         onComplete?.Invoke();
+    }
+
+    private void BeginBgmDuck()
+    {
+        if (isDuckingBgm)
+        {
+            return;
+        }
+
+        isDuckingBgm = true;
+        InGameBgmManager.BeginVoicePlayback();
+    }
+
+    private void EndBgmDuck()
+    {
+        if (!isDuckingBgm)
+        {
+            return;
+        }
+
+        isDuckingBgm = false;
+        InGameBgmManager.EndVoicePlayback();
     }
 }

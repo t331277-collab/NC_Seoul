@@ -12,7 +12,10 @@ public class StructStageManager : MonoBehaviour
     private const int InitialYear = 1945;
     private const string IgnoredStructName = "Stru_CommonSense";
     private const int HouseCapacityMultiplier = 10;
-    private const float PopulationCapacityGrowthFactor = 0.03f;
+    private const float PopulationCapacityGrowthFactor = 0.01f;
+    private const float PopulationMoneyGrowthFactor = 0.005f;
+    private const float PopulationScienceGrowthFactor = 0.005f;
+    private const float ScienceMoneyBonusFactor = 0.1f;
     private static readonly Color32 PeopleOverCapacityColor = new Color32(220, 64, 64, 255);
     private const float CutSceneFadeDuration = 1f;
     private const float CutSceneTextInterval = 0.5f;
@@ -403,9 +406,9 @@ private IEnumerator PlayNextYearTransition()
         }
 
         pendingValues = CalculateCurrentStructValues();
-        populationGrowthPreview = CalculatePopulationGrowth(convenience, currentPopulation, calculatedCapacity);
+        populationGrowthPreview = CalculatePopulationGrowth(convenience, currentPopulation, calculatedCapacity, money, science);
         pendingValues.People = populationGrowthPreview;
-        pendingValues.Money += CalculatePopulationMoneyBonus(currentPopulation, calculatedCapacity);
+        pendingValues.Money += CalculatePopulationMoneyBonus(currentPopulation, calculatedCapacity, science);
         pendingValues.Convenience -= CalculateOverCapacityConveniencePenalty(currentPopulation, calculatedCapacity);
 
         UpdateMainTexts();
@@ -535,7 +538,7 @@ private IEnumerator PlayNextYearTransition()
                structureName == "House4";
     }
 
-    private int CalculatePopulationGrowth(int convenienceValue, int populationValue, int capacityValue)
+    private int CalculatePopulationGrowth(int convenienceValue, int populationValue, int capacityValue, int moneyValue, int scienceValue)
     {
         if (capacityValue <= 0)
         {
@@ -550,14 +553,24 @@ private IEnumerator PlayNextYearTransition()
 
         int baseGrowth = Mathf.CeilToInt(Mathf.Max(0, convenienceValue) * 0.015f);
         int capacityGrowth = Mathf.CeilToInt(capacityValue * PopulationCapacityGrowthFactor);
+        int resourceGrowth = CalculatePopulationResourceGrowthBonus(moneyValue, scienceValue);
         float capacityPressure = Mathf.Clamp01((1f - occupancyRate) / 0.4f);
-        return Mathf.Max(0, Mathf.CeilToInt(baseGrowth * capacityPressure) + capacityGrowth);
+        return Mathf.Max(0, Mathf.CeilToInt(baseGrowth * capacityPressure) + capacityGrowth + resourceGrowth);
     }
 
-    private int CalculatePopulationMoneyBonus(int populationValue, int capacityValue)
+    private int CalculatePopulationResourceGrowthBonus(int moneyValue, int scienceValue)
+    {
+        float moneyGrowth = Mathf.Max(0, moneyValue) * PopulationMoneyGrowthFactor;
+        float scienceGrowth = Mathf.Max(0, scienceValue) * PopulationScienceGrowthFactor;
+        return Mathf.FloorToInt(moneyGrowth + scienceGrowth);
+    }
+
+    private int CalculatePopulationMoneyBonus(int populationValue, int capacityValue, int scienceValue)
     {
         int effectivePopulation = capacityValue <= 0 ? 0 : Mathf.Min(populationValue, capacityValue);
-        return Mathf.FloorToInt(effectivePopulation * 0.02f);
+        int populationBonus = Mathf.FloorToInt(effectivePopulation * 0.02f);
+        int scienceBonus = Mathf.FloorToInt(Mathf.Max(0, scienceValue) * ScienceMoneyBonusFactor);
+        return populationBonus + scienceBonus;
     }
 
     private int CalculateOverCapacityConveniencePenalty(int populationValue, int capacityValue)
