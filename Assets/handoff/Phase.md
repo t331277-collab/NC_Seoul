@@ -1,5 +1,52 @@
 # Phase
 
+## 2026-06-28 - Policy System Step 5-8 Implementation
+
+- Role: Code Builder
+- Status: Completed
+- Scope: `PolicySystem_Handoff.md` implementation steps 5~8.
+- Implemented:
+  - `PolicyChoicePanel/Yes` applies the selected policy, closes the choice panel, and refreshes the policy list.
+  - `PolicyChoicePanel/No` closes only the choice panel without applying the policy.
+  - Added active policy state with `AppliedYear`, `ExpireYear`, and one-time-use tracking.
+  - Added policy effect APIs: `IsPolicyActive`, `TryGetFloatEffect`, and `GetAdjustedBuildCost`.
+  - Parsed `HouseBuildCostMultiplier=0.5` and applied it only while the policy is active.
+  - Connected `StructureActionManager` build description, money check, spend amount, and debug cost to adjusted build cost.
+  - `House1`~`House4` build costs now use the policy discount while `전후 주택복구사업` is active.
+- Verified:
+  - `dotnet build .\Assembly-CSharp.csproj --no-restore` completed with 0 errors.
+  - Unity-MCP check: `PolicyManager` attached to `UI`, `PolicyDefinition.csv` loads 1 policy.
+  - Unity-MCP policy effect check: active `HouseBuildCostMultiplier=0.5` returns House1 `15`, House2 `23`, and leaves a non-house sample unchanged.
+
+## 2026-06-28 - Policy System Step 1-4 Implementation
+
+- Role: Code Builder
+- Status: Completed
+- Scope: `PolicySystem_Handoff.md` implementation steps 1~4.
+- Implemented:
+  - Added `Assets/Data/PolicyDefinition.csv` with `전후 주택복구사업`.
+  - Added `PolicyDefinitionDatabase.cs` and `PolicyDefinitionData`.
+  - Added `PolicyManager.cs`.
+  - Bound `UI/PolicyBtn`, `UI/PolicyPanel`, `UI/PolicyChoicePanel`, `Content`, `Template`, `Yes`, `No`, and panel close controls.
+  - PolicyPanel now lists policies where `해금 년도 <= StructStageManager.CurrentYear`.
+  - PolicyPanel clones `Content/Template`, fills `Statue`, `Desc`, and `Need`, and wires cloned item clicks to open `PolicyChoicePanel`.
+  - Attached `PolicyManager` to `UI` in `InGameScene` and saved the scene.
+- Verified:
+  - Unity-MCP check: `PolicyManager` attached, `PolicyDefinition.csv` loads 1 policy, required UI paths exist.
+  - Unity console error filter showed no script compilation errors.
+  - `dotnet build .\Assembly-CSharp.csproj --no-restore` completed with 0 errors.
+
+## 2026-06-28 - Policy System Handoff
+
+- Role: Code Builder
+- Status: Completed
+- Scope: Policy feature planning document.
+- Created:
+  - `Assets/handoff/PolicySystem_Handoff.md`.
+  - Defined `Assets/Data/PolicyDefinition.csv` schema.
+  - Added first policy spec: `전후 주택복구사업`.
+  - Documented PolicyBtn, PolicyPanel, PolicyChoicePanel, Template cloning, Yes/No flow, and house build-cost discount integration.
+
 ## 2026-06-28 - Infor Event Notifications
 
 - Role: Code Builder
@@ -33,8 +80,8 @@
 - Status: Completed
 - Scope: Population growth formula in `StructStageManager`.
 - Implemented:
-  - Added `PopulationCapacityGrowthFactor = 0.07f`.
-  - Current population growth now keeps the existing convenience-based growth and additionally adds `ceil(total population capacity * 0.07)`.
+  - Added `PopulationCapacityGrowthFactor = 0.03f`.
+  - Current population growth now keeps the existing convenience-based growth and additionally adds `ceil(total population capacity * 0.03)`.
   - Growth still returns `0` when current population is already at or above capacity.
 
 ## 2026-06-28 - Population Capacity Landmark Balance Counterproposal Refresh

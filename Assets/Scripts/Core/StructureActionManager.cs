@@ -38,6 +38,7 @@ public class StructureActionManager : MonoBehaviour
     private ToastPopupManager toastPopupManager;
     private InfoNotificationManager infoNotificationManager;
     private UIManager uiManager;
+    private PolicyManager policyManager;
     private GameObject buildPanel;
     private TextMeshProUGUI buildNameText;
     private TextMeshProUGUI buildDescText;
@@ -359,15 +360,16 @@ public class StructureActionManager : MonoBehaviour
         }
 
         bool lacksScience = stageManager.Science < selectedDefinition.UnlockScience;
-        bool lacksMoney = stageManager.Money < selectedDefinition.BuildCost;
+        int buildCost = GetAdjustedBuildCost(selectedDefinition);
+        bool lacksMoney = stageManager.Money < buildCost;
         if (lacksScience || lacksMoney)
         {
             ShowBuildRequirementShortageToast(lacksScience, lacksMoney);
-            Debug.LogWarning("Not enough requirements to build " + selectedDefinition.Name + ". CurrentScience=" + stageManager.Science + ", RequiredScience=" + selectedDefinition.UnlockScience + ", CurrentMoney=" + stageManager.Money + ", RequiredMoney=" + selectedDefinition.BuildCost + ".");
+            Debug.LogWarning("Not enough requirements to build " + selectedDefinition.Name + ". CurrentScience=" + stageManager.Science + ", RequiredScience=" + selectedDefinition.UnlockScience + ", CurrentMoney=" + stageManager.Money + ", RequiredMoney=" + buildCost + ".");
             return;
         }
 
-        if (!stageManager.TrySpendMoney(selectedDefinition.BuildCost))
+        if (!stageManager.TrySpendMoney(buildCost))
         {
             ShowMoneyShortageToast();
             Debug.LogWarning("Not enough money to build " + selectedDefinition.Name + "." );
@@ -1143,6 +1145,12 @@ public class StructureActionManager : MonoBehaviour
             infoNotificationManager = gameObject.AddComponent<InfoNotificationManager>();
         }
 
+        policyManager = GetComponent<PolicyManager>();
+        if (policyManager == null)
+        {
+            policyManager = FindObjectOfType<PolicyManager>();
+        }
+
         uiManager = GetComponent<UIManager>();
         if (uiManager == null)
         {
@@ -1318,8 +1326,27 @@ public class StructureActionManager : MonoBehaviour
             return string.Empty;
         }
 
-        string moneyDescription = ReplaceToken(buildDescTemplate, "{InvestAmont}", FormatMoneyK(definition.BuildCost));
+        string moneyDescription = ReplaceToken(buildDescTemplate, "{InvestAmont}", FormatMoneyK(GetAdjustedBuildCost(definition)));
         return moneyDescription + "\n" + definition.UnlockScience.ToString("N0") + " 기술력 요구";
+    }
+
+    private int GetAdjustedBuildCost(StructDefinitionData definition)
+    {
+        if (definition == null)
+        {
+            return 0;
+        }
+
+        if (policyManager == null)
+        {
+            policyManager = GetComponent<PolicyManager>();
+            if (policyManager == null)
+            {
+                policyManager = FindObjectOfType<PolicyManager>();
+            }
+        }
+
+        return policyManager == null ? definition.BuildCost : policyManager.GetAdjustedBuildCost(definition);
     }
 
     private string ReadTemplate(TextMeshProUGUI text, string fallback)
