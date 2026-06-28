@@ -1,5 +1,40 @@
 # Phase
 
+## 2026-06-28 - Prototype Ending Panel
+
+- Role: Code Builder
+- Status: Completed
+- Scope: Activate prototype ending UI at year 2027 and block other interactions.
+- Implemented:
+  - Added `ProtoTypeEndingManager`.
+  - `ProtoTypeEndingPanel` starts inactive.
+  - When the game year reaches `2027`, `StructStageManager` requests the ending panel.
+  - If a year transition cutscene is playing, the ending panel is shown after the cutscene finishes.
+  - A transparent full-screen `ProtoTypeEndingInputBlocker` is activated behind `ProtoTypeEndingPanel` to block all other UI/world interactions.
+  - `ProtoTypeEndingPanel/MainMenuBtn` loads `Assets/Scenes/MainScene.unity` through `SceneManager.LoadScene("MainScene")`.
+- Verified:
+  - `dotnet build .\Assembly-CSharp.csproj --no-restore` completed with 0 errors.
+  - Unity-MCP check: `ProtoTypeEndingManager` attached, `ProtoTypeEndingPanel` and `MainMenuBtn` found, `MainScene` is enabled in build settings.
+  - Unity-MCP runtime check: `ShowEnding()` activates the panel and input blocker; saved scene keeps both inactive by default.
+
+## 2026-06-28 - UI SFX Integration
+
+- Role: Code Builder
+- Status: Completed
+- Scope: Dedicated UI SFX AudioSource and SFX triggers for panel open, construction, demolition, investment, and policy acceptance.
+- Implemented:
+  - Added `UISfxManager` with a dedicated `AudioSource` and one-shot methods for UI click, construct, policy accepted, and accepted SFX.
+  - Added `UISfxManager` and `AudioSource` to `UI` in `InGameScene`.
+  - Assigned `Assets/Sound/SFX/UI_Click_SFX.mp3`, `Construct_SFX.mp3`, `PolicyAccepted.mp3`, and `Accepted_SFX.mp3`.
+  - Panel open SFX is played by terrain, district list/detail, resource detail, build/invest/repair/destroy, policy, and info panels.
+  - Construction and demolition success use `Construct_SFX.mp3`.
+  - Investment acceptance uses `Accepted_SFX.mp3`.
+  - Policy acceptance uses `PolicyAccepted.mp3`.
+  - District panel refreshes suppress panel-open SFX to avoid duplicate sounds during UI redraw.
+- Verified:
+  - `dotnet build .\Assembly-CSharp.csproj --no-restore` completed with 0 errors.
+  - Unity-MCP check: `UISfxManager`, dedicated `AudioSource`, and all four clip references are assigned; console error filter showed no script compilation errors.
+
 ## 2026-06-28 - Infor Notification Reset And Scroll
 
 - Role: Code Builder

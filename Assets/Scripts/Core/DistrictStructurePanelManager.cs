@@ -40,8 +40,10 @@ public class DistrictStructurePanelManager : MonoBehaviour
     private ScrollRect buildableScrollRect;
     private StructureActionManager structureActionManager;
     private StructureNarratorVoiceRunner narratorVoiceRunner;
+    private UISfxManager uiSfxManager;
     private string selectedRegionDisplayName;
     private Transform selectedRegionTransform;
+    private bool suppressPanelOpenSfx;
 
     private void Awake()
     {
@@ -81,6 +83,7 @@ public class DistrictStructurePanelManager : MonoBehaviour
         BindSceneObjects();
         LoadStructDefinitions();
         SetPanelActive(currentPanel, true);
+        PlayPanelOpenSfx();
         SetText(currentNameText, selectedRegionDisplayName + " (현재 건물목록)");
         PopulateStructures(selectedRegionTransform, true, true, currentTemplate, currentContent, currentContainer, currentScrollRect, currentItems);
     }
@@ -95,6 +98,7 @@ public class DistrictStructurePanelManager : MonoBehaviour
         BindSceneObjects();
         LoadStructDefinitions();
         SetPanelActive(buildablePanel, true);
+        PlayPanelOpenSfx();
         SetText(buildableNameText, selectedRegionDisplayName + " (건축 가능 건물)");
         PopulateStructures(selectedRegionTransform, false, false, buildableTemplate, buildableContent, buildableContainer, buildableScrollRect, buildableItems);
     }
@@ -105,12 +109,16 @@ public class DistrictStructurePanelManager : MonoBehaviour
 
         if (refreshCurrent)
         {
+            suppressPanelOpenSfx = true;
             ShowCurrentStructures();
+            suppressPanelOpenSfx = false;
         }
 
         if (refreshBuildable)
         {
+            suppressPanelOpenSfx = true;
             ShowBuildableStructures();
+            suppressPanelOpenSfx = false;
         }
     }
 
@@ -127,6 +135,11 @@ public class DistrictStructurePanelManager : MonoBehaviour
         }
 
         structureActionManager = uiRoot.GetComponent<StructureActionManager>();
+        uiSfxManager = uiRoot.GetComponent<UISfxManager>();
+        if (uiSfxManager == null)
+        {
+            uiSfxManager = FindObjectOfType<UISfxManager>();
+        }
 
         Transform currentPanelTransform = uiRoot.Find("CurStruc");
         Transform buildablePanelTransform = uiRoot.Find("CanBuildStruc");
@@ -551,6 +564,7 @@ public class DistrictStructurePanelManager : MonoBehaviour
 
         SetPanelActive(currentPanel, false);
         SetPanelActive(descriptionPanel, true);
+        PlayPanelOpenSfx();
         SetText(descriptionNameText, ResolveDisplayName(definition));
         SetText(descriptionText, definition.Description);
         SetText(descriptionStartYearText, definition.StartYear);
@@ -711,10 +725,29 @@ public class DistrictStructurePanelManager : MonoBehaviour
         if (narratorVoiceRunner != null) narratorVoiceRunner.StopNarrator();
         SetPanelActive(descriptionPanel, false);
         SetPanelActive(currentPanel, true);
+        PlayPanelOpenSfx();
     }
 
     private void OnDisable()
     {
         if (narratorVoiceRunner != null) narratorVoiceRunner.StopNarrator();
+    }
+
+    private void PlayPanelOpenSfx()
+    {
+        if (suppressPanelOpenSfx)
+        {
+            return;
+        }
+
+        if (uiSfxManager == null)
+        {
+            uiSfxManager = UISfxManager.Instance;
+        }
+
+        if (uiSfxManager != null)
+        {
+            uiSfxManager.PlayPanelOpen();
+        }
     }
 }

@@ -39,6 +39,8 @@ public class StructStageManager : MonoBehaviour
     private TextMeshProUGUI cutSceneYearNameText;
     private bool isYearTransitionPlaying;
     private InfoNotificationManager infoNotificationManager;
+    private ProtoTypeEndingManager protoTypeEndingManager;
+    private bool pendingProtoTypeEnding;
 
 
     private int currentYear = InitialYear;
@@ -139,6 +141,7 @@ private IEnumerator PlayNextYearTransition()
             nextYearButton.interactable = true;
         }
         isYearTransitionPlaying = false;
+        ShowPendingProtoTypeEnding();
     }
 
     private IEnumerator FadeCutScene(float fromAlpha, float toAlpha, float duration)
@@ -200,6 +203,7 @@ private IEnumerator PlayNextYearTransition()
         }
 
         RefreshPendingValues();
+        RequestProtoTypeEndingIfNeeded();
     }
 
     public bool TrySpendMoney(int amount)
@@ -258,6 +262,11 @@ private IEnumerator PlayNextYearTransition()
 
         structureActionManager = uiRoot.GetComponent<StructureActionManager>();
         infoNotificationManager = uiRoot.GetComponent<InfoNotificationManager>();
+        protoTypeEndingManager = uiRoot.GetComponent<ProtoTypeEndingManager>();
+        if (protoTypeEndingManager == null)
+        {
+            protoTypeEndingManager = uiRoot.gameObject.AddComponent<ProtoTypeEndingManager>();
+        }
 
         Transform yearPanel = uiRoot.Find("YearPanel");
         if (yearPanel != null)
@@ -309,6 +318,39 @@ private IEnumerator PlayNextYearTransition()
         if (infoNotificationManager != null)
         {
             infoNotificationManager.ClearNotificationsForNewYear();
+        }
+    }
+
+    private void RequestProtoTypeEndingIfNeeded()
+    {
+        if (currentYear < 2027)
+        {
+            return;
+        }
+
+        pendingProtoTypeEnding = true;
+        if (!isYearTransitionPlaying)
+        {
+            ShowPendingProtoTypeEnding();
+        }
+    }
+
+    private void ShowPendingProtoTypeEnding()
+    {
+        if (!pendingProtoTypeEnding)
+        {
+            return;
+        }
+
+        if (protoTypeEndingManager == null)
+        {
+            BindSceneObjects();
+        }
+
+        if (protoTypeEndingManager != null)
+        {
+            protoTypeEndingManager.ShowEnding();
+            pendingProtoTypeEnding = false;
         }
     }
 

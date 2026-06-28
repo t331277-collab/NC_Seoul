@@ -9,6 +9,7 @@ public class ResourceDetailPanelManager : MonoBehaviour
 
     private readonly List<ResourcePanelBinding> bindings = new List<ResourcePanelBinding>();
     private ResourcePanelBinding activeBinding;
+    private UISfxManager uiSfxManager;
 
     private void Awake()
     {
@@ -132,6 +133,7 @@ private void AddListeners()
         CloseAllPanels();
         activeBinding = binding;
         SetActive(binding.DetailPanel, true);
+        PlayPanelOpenSfx();
         SyncTexts(binding);
     }
 
@@ -238,6 +240,19 @@ private void AddListeners()
         if (target != null)
         {
             target.SetActive(isActive);
+        }
+    }
+
+    private void PlayPanelOpenSfx()
+    {
+        if (uiSfxManager == null)
+        {
+            uiSfxManager = UISfxManager.Instance;
+        }
+
+        if (uiSfxManager != null)
+        {
+            uiSfxManager.PlayPanelOpen();
         }
     }
 

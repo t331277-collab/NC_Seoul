@@ -25,6 +25,7 @@ public class InfoNotificationManager : MonoBehaviour
     private Button inforButton;
     private Button closeButton;
     private ScrollRect scrollRect;
+    private UISfxManager uiSfxManager;
     private Coroutine imageMoveCoroutine;
     private Vector2 inforImageDefaultPosition;
     private bool hasInforImageDefaultPosition;
@@ -92,6 +93,15 @@ public class InfoNotificationManager : MonoBehaviour
             if (uiManager == null)
             {
                 uiManager = FindObjectOfType<UIManager>();
+            }
+        }
+
+        if (uiSfxManager == null)
+        {
+            uiSfxManager = GetComponent<UISfxManager>();
+            if (uiSfxManager == null)
+            {
+                uiSfxManager = FindObjectOfType<UISfxManager>();
             }
         }
 
@@ -260,6 +270,7 @@ public class InfoNotificationManager : MonoBehaviour
     {
         ResetInfoButtonAppearance(true);
         SetActive(inforPanel, true);
+        PlayPanelOpenSfx();
     }
 
     private void CloseInfoPanel()
@@ -480,6 +491,19 @@ public class InfoNotificationManager : MonoBehaviour
         if (target != null)
         {
             target.SetActive(isActive);
+        }
+    }
+
+    private void PlayPanelOpenSfx()
+    {
+        if (uiSfxManager == null)
+        {
+            uiSfxManager = UISfxManager.Instance;
+        }
+
+        if (uiSfxManager != null)
+        {
+            uiSfxManager.PlayPanelOpen();
         }
     }
 }

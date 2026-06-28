@@ -25,6 +25,7 @@ public class PolicyManager : MonoBehaviour
     private Button choiceYesButton;
     private Button choiceNoButton;
     private Button closeButton;
+    private UISfxManager uiSfxManager;
     private PolicyDefinitionData selectedPolicy;
 
     private void Awake()
@@ -50,6 +51,11 @@ public class PolicyManager : MonoBehaviour
     private void BindSceneObjects()
     {
         stageManager = GetComponent<StructStageManager>();
+        uiSfxManager = GetComponent<UISfxManager>();
+        if (uiSfxManager == null)
+        {
+            uiSfxManager = FindObjectOfType<UISfxManager>();
+        }
 
         Transform uiRoot = transform;
         if (gameObject.name != "UI")
@@ -165,6 +171,7 @@ public class PolicyManager : MonoBehaviour
         }
 
         SetActive(policyPanel, true);
+        PlayPanelOpenSfx();
         SetActive(templateRect == null ? null : templateRect.gameObject, false);
         PopulateAvailablePolicies();
     }
@@ -199,6 +206,7 @@ public class PolicyManager : MonoBehaviour
         activePolicies.Add(state);
         usedPolicyNames.Add(selectedPolicy.Name);
 
+        PlayPolicyAcceptedSfx();
         ClosePolicyChoicePanel();
         PopulateAvailablePolicies();
     }
@@ -341,6 +349,7 @@ public class PolicyManager : MonoBehaviour
         SetText(choiceNameText, definition == null ? string.Empty : definition.Name);
         SetText(choiceDescText, BuildChoiceDescription(definition));
         SetActive(policyChoicePanel, true);
+        PlayPanelOpenSfx();
     }
 
     private string BuildChoiceDescription(PolicyDefinitionData definition)
@@ -443,6 +452,32 @@ public class PolicyManager : MonoBehaviour
         if (target != null)
         {
             target.SetActive(isActive);
+        }
+    }
+
+    private void PlayPanelOpenSfx()
+    {
+        if (uiSfxManager == null)
+        {
+            uiSfxManager = UISfxManager.Instance;
+        }
+
+        if (uiSfxManager != null)
+        {
+            uiSfxManager.PlayPanelOpen();
+        }
+    }
+
+    private void PlayPolicyAcceptedSfx()
+    {
+        if (uiSfxManager == null)
+        {
+            uiSfxManager = UISfxManager.Instance;
+        }
+
+        if (uiSfxManager != null)
+        {
+            uiSfxManager.PlayPolicyAccepted();
         }
     }
 

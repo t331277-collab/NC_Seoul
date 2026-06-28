@@ -39,6 +39,7 @@ public class StructureActionManager : MonoBehaviour
     private InfoNotificationManager infoNotificationManager;
     private UIManager uiManager;
     private PolicyManager policyManager;
+    private UISfxManager uiSfxManager;
     private GameObject buildPanel;
     private TextMeshProUGUI buildNameText;
     private TextMeshProUGUI buildDescText;
@@ -169,6 +170,7 @@ public class StructureActionManager : MonoBehaviour
 
         SetStructureActionPanelsActive(false);
         SetBuildPanelActive(true);
+        PlayPanelOpenSfx();
     }
 
     public void OpenInvestPanel(GameObject targetObject, StructDefinitionData definition, string displayName, DistrictStructurePanelManager sourcePanelManager)
@@ -336,6 +338,7 @@ public class StructureActionManager : MonoBehaviour
         SetBuildPanelActive(false);
         SetStructureActionPanelsActive(false);
         panel.SetActive(true);
+        PlayPanelOpenSfx();
     }
 
     private void SelectStructure(GameObject targetObject, StructDefinitionData definition, string displayName, DistrictStructurePanelManager sourcePanelManager)
@@ -388,6 +391,7 @@ public class StructureActionManager : MonoBehaviour
         job.WorkVisualObject = CreateConstructionWorkVisual(selectedTarget);
         constructionJobs.Add(job);
 
+        PlayConstructSfx();
         SetBuildPanelActive(false);
         RefreshLinkedUi();
     }
@@ -434,6 +438,7 @@ public class StructureActionManager : MonoBehaviour
         investmentState.pendingRegionDisplayName = GetRegionDisplayName(investmentState.pendingRegionName);
         investmentState.pendingStructureDisplayName = selectedDisplayName;
 
+        PlayAcceptedSfx();
         SetStructureActionPanelsActive(false);
         RefreshLinkedUi();
     }
@@ -489,6 +494,7 @@ public class StructureActionManager : MonoBehaviour
 
         selectedTarget.SetActive(false);
         RemoveInvestmentBoost(selectedTarget);
+        PlayConstructSfx();
         SetStructureActionPanelsActive(false);
         if (TutorialDialogueRunner.Instance != null && selectedDefinition != null)
         {
@@ -1155,6 +1161,12 @@ public class StructureActionManager : MonoBehaviour
             policyManager = FindObjectOfType<PolicyManager>();
         }
 
+        uiSfxManager = GetComponent<UISfxManager>();
+        if (uiSfxManager == null)
+        {
+            uiSfxManager = FindObjectOfType<UISfxManager>();
+        }
+
         uiManager = GetComponent<UIManager>();
         if (uiManager == null)
         {
@@ -1351,6 +1363,45 @@ public class StructureActionManager : MonoBehaviour
         }
 
         return policyManager == null ? definition.BuildCost : policyManager.GetAdjustedBuildCost(definition);
+    }
+
+    private void PlayPanelOpenSfx()
+    {
+        if (uiSfxManager == null)
+        {
+            uiSfxManager = UISfxManager.Instance;
+        }
+
+        if (uiSfxManager != null)
+        {
+            uiSfxManager.PlayPanelOpen();
+        }
+    }
+
+    private void PlayConstructSfx()
+    {
+        if (uiSfxManager == null)
+        {
+            uiSfxManager = UISfxManager.Instance;
+        }
+
+        if (uiSfxManager != null)
+        {
+            uiSfxManager.PlayConstruct();
+        }
+    }
+
+    private void PlayAcceptedSfx()
+    {
+        if (uiSfxManager == null)
+        {
+            uiSfxManager = UISfxManager.Instance;
+        }
+
+        if (uiSfxManager != null)
+        {
+            uiSfxManager.PlayAccepted();
+        }
     }
 
     private string ReadTemplate(TextMeshProUGUI text, string fallback)

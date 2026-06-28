@@ -10,6 +10,7 @@ public class UIManager : MonoBehaviour
     [SerializeField] private Transform mainCamera;
 
     private Coroutine cameraMoveCoroutine;
+    private UISfxManager uiSfxManager;
     private readonly Dictionary<string, Vector3> regionCameraPositions = new Dictionary<string, Vector3>
     {
         { "JungRangGu", new Vector3(1.56f, 1f, 0.132f) },
@@ -95,6 +96,7 @@ public class UIManager : MonoBehaviour
         if (terrainPanel != null)
         {
             terrainPanel.SetActive(true);
+            PlayPanelOpenSfx();
         }
 
         if (terrainName != null)
@@ -161,5 +163,18 @@ public class UIManager : MonoBehaviour
 
         mainCamera.position = targetPosition;
         cameraMoveCoroutine = null;
+    }
+
+    private void PlayPanelOpenSfx()
+    {
+        if (uiSfxManager == null)
+        {
+            uiSfxManager = UISfxManager.Instance;
+        }
+
+        if (uiSfxManager != null)
+        {
+            uiSfxManager.PlayPanelOpen();
+        }
     }
 }
