@@ -388,6 +388,11 @@ public class StructureActionManager : MonoBehaviour
         job.WorkVisualObject = CreateConstructionWorkVisual(selectedTarget);
         constructionJobs.Add(job);
 
+        if (TutorialDialogueRunner.Instance != null && selectedDefinition != null)
+        {
+            TutorialDialogueRunner.Instance.NotifyStructureBuilt(selectedDefinition.Name, job.RegionName);
+        }
+
         SetBuildPanelActive(false);
         RefreshLinkedUi();
     }

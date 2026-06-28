@@ -41,6 +41,7 @@ public class TutorialDialogueRunner : MonoBehaviour
     private bool isWaitingForVoice = false;
     private bool isWaitingForAction = false;
     private GameObject tutorialPromptPanel;
+    private HashSet<string> builtTutorialHouses = new HashSet<string>();
 
     private void Awake()
     {
@@ -135,6 +136,40 @@ public class TutorialDialogueRunner : MonoBehaviour
             inputManager.UnlockInput();
             Debug.Log($"[철거 대기중]: {currentNode.instruction}");
             return;
+        }
+
+        if (currentNode.type == "waitForPolicyApply")
+        {
+            isWaitingForVoice = false;
+            isWaitingForAction = true;
+            inputManager.UnlockInput();
+            Debug.Log($"[정책 적용 대기중]: {currentNode.instruction}");
+            return;
+        }
+
+        if (currentNode.type == "waitForBuildHouses")
+        {
+            isWaitingForVoice = false;
+            isWaitingForAction = true;
+            builtTutorialHouses.Clear();
+            inputManager.UnlockInput();
+            Debug.Log($"[주택 건설 대기중]: {currentNode.instruction}");
+            return;
+        }
+
+        if (currentNode.id == "build_house_001")
+        {
+            StructStageManager stageManager = FindObjectOfType<StructStageManager>();
+            if (stageManager != null)
+            {
+                stageManager.SetMoney(100);
+                stageManager.SetScience(100);
+            }
+            PolicyManager policyManager = FindObjectOfType<PolicyManager>();
+            if (policyManager != null)
+            {
+                policyManager.CloseAllPanels();
+            }
         }
 
         isWaitingForAction = false;
@@ -255,6 +290,54 @@ public class TutorialDialogueRunner : MonoBehaviour
             if (!string.IsNullOrEmpty(currentNode.next))
             {
                 RunNode(currentNode.next);
+            }
+        }
+    }
+
+    public void NotifyPolicyApplied(string policyName)
+    {
+        if (isWaitingForAction && currentNode != null && currentNode.type == "waitForPolicyApply")
+        {
+            if (string.IsNullOrEmpty(currentNode.allowedTargetPath) || currentNode.allowedTargetPath == policyName)
+            {
+                isWaitingForAction = false;
+                inputManager.LockInput();
+                if (!string.IsNullOrEmpty(currentNode.onActionSetFlag))
+                {
+                    TutorialFlagStore.SetFlag(currentNode.onActionSetFlag);
+                }
+                if (!string.IsNullOrEmpty(currentNode.next))
+                {
+                    RunNode(currentNode.next);
+                }
+            }
+        }
+    }
+
+    public void NotifyStructureBuilt(string structureId, string regionName)
+    {
+        if (isWaitingForAction && currentNode != null && currentNode.type == "waitForBuildHouses")
+        {
+            if (string.IsNullOrEmpty(currentNode.allowedTargetPath) || currentNode.allowedTargetPath == regionName)
+            {
+                if (structureId == "House1" || structureId == "House2" || structureId == "House3")
+                {
+                    builtTutorialHouses.Add(structureId);
+                    Debug.Log($"[튜토리얼 주택 건설 감지] {structureId} in {regionName} ({builtTutorialHouses.Count}/3)");
+                    if (builtTutorialHouses.Count >= 3)
+                    {
+                        isWaitingForAction = false;
+                        inputManager.LockInput();
+                        if (!string.IsNullOrEmpty(currentNode.onActionSetFlag))
+                        {
+                            TutorialFlagStore.SetFlag(currentNode.onActionSetFlag);
+                        }
+                        if (!string.IsNullOrEmpty(currentNode.next))
+                        {
+                            RunNode(currentNode.next);
+                        }
+                    }
+                }
             }
         }
     }

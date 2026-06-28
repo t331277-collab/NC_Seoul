@@ -215,6 +215,20 @@ private IEnumerator PlayNextYearTransition()
         return true;
     }
 
+    public void SetMoney(int amount)
+    {
+        money = Mathf.Max(0, amount);
+        UpdateMainTexts();
+        RefreshPendingValues();
+    }
+
+    public void SetScience(int amount)
+    {
+        science = Mathf.Max(0, amount);
+        UpdateMainTexts();
+        RefreshPendingValues();
+    }
+
     public StatValues GetStructureProduction(string structureKey)
     {
         StatValues values = default;
