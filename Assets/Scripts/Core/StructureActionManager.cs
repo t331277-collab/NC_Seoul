@@ -15,6 +15,7 @@ public class StructureActionManager : MonoBehaviour
     private const string DefaultDestroyNameTemplate = "{StruName} 철거 명령서";
     private const string DefaultDestroyDescTemplate = "{InvestAmont} 만큼의 금액으로 해당 건물의 철거를 명령함";
     private const float InvestMultiplier = 1.5f;
+    private const float PrototypeInvestmentChanceMultiplier = 2.5f;
     private static readonly int[] HouseInvestmentCosts = new int[] { 80, 100, 125, 155, 195, 250, 320, 410, 520, 660, 850, 1100, 1400, 1800, 2300 };
     private const string VisualRootName = "VisualRoot";
 
@@ -613,19 +614,23 @@ public class StructureActionManager : MonoBehaviour
         }
 
         int science = stageManager.Science;
+        float baseChance = 0f;
         if (investmentState.StructureKind == StructureInvestmentState.InvestmentStructureKind.House)
         {
-            return GetHouseInvestmentSuccessChance(science, investmentState.successfulInvestmentCount);
+            baseChance = GetHouseInvestmentSuccessChance(science, investmentState.successfulInvestmentCount);
+            return Mathf.Clamp01(baseChance * PrototypeInvestmentChanceMultiplier);
         }
 
         if (investmentState.StructureKind == StructureInvestmentState.InvestmentStructureKind.CommonFacility)
         {
-            return GetCommonFacilitySuccessChance(science, investmentState.successfulInvestmentCount, GetResourceTotal(definition));
+            baseChance = GetCommonFacilitySuccessChance(science, investmentState.successfulInvestmentCount, GetResourceTotal(definition));
+            return Mathf.Clamp01(baseChance * PrototypeInvestmentChanceMultiplier);
         }
 
         if (investmentState.StructureKind == StructureInvestmentState.InvestmentStructureKind.UniqueStructure)
         {
-            return GetUniqueStructureSuccessChance(science, definition);
+            baseChance = GetUniqueStructureSuccessChance(science, definition);
+            return Mathf.Clamp01(baseChance * PrototypeInvestmentChanceMultiplier);
         }
 
         return 0f;

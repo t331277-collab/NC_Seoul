@@ -10,6 +10,9 @@ using UnityEngine.UI;
 public class StructStageManager : MonoBehaviour
 {
     private const int InitialYear = 1954;
+    private const int YearStep = 10;
+    private const int MoneyGainMultiplier = 9;
+    private const int ScienceGainMultiplier = 3;
     private const string IgnoredStructName = "Stru_CommonSense";
     private const int HouseCapacityMultiplier = 10;
     private const float PopulationCapacityGrowthFactor = 0.01f;
@@ -184,7 +187,7 @@ private IEnumerator PlayNextYearTransition()
 
     public void ApplyNextYear()
     {
-        currentYear += 1;
+        currentYear += YearStep;
         ClearPreviousYearNotifications();
 
         if (BeforeYearProduction != null)
@@ -353,7 +356,7 @@ private IEnumerator PlayNextYearTransition()
 
     private void RequestProtoTypeEndingIfNeeded()
     {
-        if (currentYear < 2027)
+        if (currentYear <= 2027)
         {
             return;
         }
@@ -430,6 +433,8 @@ private IEnumerator PlayNextYearTransition()
         populationGrowthPreview = CalculatePopulationGrowth(convenience, currentPopulation, calculatedCapacity, money, science);
         pendingValues.People = populationGrowthPreview;
         pendingValues.Money += CalculatePopulationMoneyBonus(currentPopulation, calculatedCapacity, science);
+        pendingValues.Money = Mathf.CeilToInt(pendingValues.Money * MoneyGainMultiplier);
+        pendingValues.Science = Mathf.CeilToInt(pendingValues.Science * ScienceGainMultiplier);
 
         UpdateMainTexts();
     }
