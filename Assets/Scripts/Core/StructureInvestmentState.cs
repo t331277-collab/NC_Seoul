@@ -3,6 +3,9 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public class StructureInvestmentState : MonoBehaviour
 {
+    public const int FirstUpgradeSuccessCount = 1;
+    public const int SecondUpgradeSuccessCount = 2;
+
     public enum InvestmentStructureKind
     {
         Unknown,
@@ -62,14 +65,14 @@ public class StructureInvestmentState : MonoBehaviour
 
         if (kind == InvestmentStructureKind.House || kind == InvestmentStructureKind.CommonFacility)
         {
-            if (clampedSuccessCount >= 10)
+            if (clampedSuccessCount >= SecondUpgradeSuccessCount)
             {
-                return 4f * (1f + 0.1f * (clampedSuccessCount - 10));
+                return 4f * (1f + 0.1f * (clampedSuccessCount - SecondUpgradeSuccessCount));
             }
 
-            if (clampedSuccessCount >= 5)
+            if (clampedSuccessCount >= FirstUpgradeSuccessCount)
             {
-                return 2f * (1f + 0.1f * (clampedSuccessCount - 5));
+                return 2f * (1f + 0.1f * (clampedSuccessCount - FirstUpgradeSuccessCount));
             }
 
             return 1f + 0.1f * clampedSuccessCount;
@@ -85,12 +88,12 @@ public class StructureInvestmentState : MonoBehaviour
             return 0;
         }
 
-        if (successCount >= 10)
+        if (successCount >= SecondUpgradeSuccessCount)
         {
             return 2;
         }
 
-        if (successCount >= 5)
+        if (successCount >= FirstUpgradeSuccessCount)
         {
             return 1;
         }

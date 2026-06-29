@@ -210,12 +210,12 @@ public class InvestmentBalanceSimulator : MonoBehaviour
         StructureInvestmentState.InvestmentStructureKind kind = StructureInvestmentState.ResolveStructureKind(definition.Name);
         if (kind == StructureInvestmentState.InvestmentStructureKind.House)
         {
-            if (successCount < 5)
+            if (successCount < StructureInvestmentState.FirstUpgradeSuccessCount)
             {
                 return Mathf.Clamp(0.30f + science * 0.00028f, 0.30f, 0.75f);
             }
 
-            if (successCount < 10)
+            if (successCount < StructureInvestmentState.SecondUpgradeSuccessCount)
             {
                 return Mathf.Clamp(0.08f + science * 0.00036f, 0.10f, 0.88f);
             }
@@ -227,7 +227,7 @@ public class InvestmentBalanceSimulator : MonoBehaviour
         {
             int resourceTotal = GetResourceTotal(definition);
             float resourcePenalty = Mathf.Clamp(resourceTotal * 0.01f, 0f, 0.20f);
-            if (successCount < 5)
+            if (successCount < StructureInvestmentState.FirstUpgradeSuccessCount)
             {
                 return Mathf.Clamp(0.25f - resourcePenalty + science * 0.00024f, 0.12f, 0.70f);
             }

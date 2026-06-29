@@ -638,12 +638,12 @@ public class StructureActionManager : MonoBehaviour
 
     private float GetHouseInvestmentSuccessChance(int science, int successCount)
     {
-        if (successCount < 5)
+        if (successCount < StructureInvestmentState.FirstUpgradeSuccessCount)
         {
             return Mathf.Clamp(0.30f + science * 0.00028f, 0.30f, 0.75f);
         }
 
-        if (successCount < 10)
+        if (successCount < StructureInvestmentState.SecondUpgradeSuccessCount)
         {
             return Mathf.Clamp(0.08f + science * 0.00036f, 0.10f, 0.88f);
         }
@@ -654,7 +654,7 @@ public class StructureActionManager : MonoBehaviour
     private float GetCommonFacilitySuccessChance(int science, int successCount, int resourceTotal)
     {
         float resourcePenalty = Mathf.Clamp(resourceTotal * 0.01f, 0f, 0.20f);
-        if (successCount < 5)
+        if (successCount < StructureInvestmentState.FirstUpgradeSuccessCount)
         {
             return Mathf.Clamp(0.25f - resourcePenalty + science * 0.00024f, 0.12f, 0.70f);
         }
@@ -1148,14 +1148,14 @@ public class StructureActionManager : MonoBehaviour
         int successCount = investmentState.successfulInvestmentCount;
         if (kind == StructureInvestmentState.InvestmentStructureKind.House)
         {
-            if (successCount >= 10)
+            if (successCount >= StructureInvestmentState.SecondUpgradeSuccessCount)
             {
                 targetStage = 2;
                 prefab = apartmentPrefab;
                 return prefab != null;
             }
 
-            if (successCount >= 5)
+            if (successCount >= StructureInvestmentState.FirstUpgradeSuccessCount)
             {
                 targetStage = 1;
                 prefab = newHousePrefab;
@@ -1163,7 +1163,8 @@ public class StructureActionManager : MonoBehaviour
             }
         }
 
-        if (kind == StructureInvestmentState.InvestmentStructureKind.CommonFacility && successCount >= 5)
+        if (kind == StructureInvestmentState.InvestmentStructureKind.CommonFacility &&
+            successCount >= StructureInvestmentState.FirstUpgradeSuccessCount)
         {
             targetStage = 1;
             if (investmentState.gameObject.name == "School")

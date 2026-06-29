@@ -8,6 +8,7 @@ public class InfoNotificationManager : MonoBehaviour
 {
     private const float AlertMoveDuration = 0.5f;
     private const float NotificationItemSpacing = 186.8f;
+    private const int MaxNotificationItemCount = 3;
     private static readonly Vector2 AlertImageTargetPosition = new Vector2(38f, -3.2f);
 
     private readonly List<GameObject> notificationItems = new List<GameObject>();
@@ -363,7 +364,46 @@ public class InfoNotificationManager : MonoBehaviour
         SetText(FindText(itemObject.transform, "Desc"), description);
         BindItemClick(itemObject, regionName, regionTransform);
         notificationItems.Add(itemObject);
+        TrimNotificationsToLimitRandomly();
+        RepositionNotificationItems();
         ResizeContentForNotifications();
+    }
+
+    private void TrimNotificationsToLimitRandomly()
+    {
+        while (notificationItems.Count > MaxNotificationItemCount)
+        {
+            int removeIndex = Random.Range(0, notificationItems.Count);
+            DestroyNotificationItem(removeIndex);
+        }
+    }
+
+    private void DestroyNotificationItem(int index)
+    {
+        if (index < 0 || index >= notificationItems.Count)
+        {
+            return;
+        }
+
+        GameObject itemObject = notificationItems[index];
+        notificationItems.RemoveAt(index);
+        if (itemObject != null)
+        {
+            Destroy(itemObject);
+        }
+    }
+
+    private void RepositionNotificationItems()
+    {
+        for (int i = 0; i < notificationItems.Count; i += 1)
+        {
+            GameObject itemObject = notificationItems[i];
+            RectTransform itemRect = itemObject == null ? null : itemObject.GetComponent<RectTransform>();
+            if (itemRect != null)
+            {
+                itemRect.anchoredPosition = new Vector2(templateRect.anchoredPosition.x, templateRect.anchoredPosition.y - NotificationItemSpacing * i);
+            }
+        }
     }
 
     private void ResizeContentForNotifications()
