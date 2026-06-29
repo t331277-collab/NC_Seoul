@@ -163,7 +163,7 @@ public class TutorialDialogueRunner : MonoBehaviour
             if (stageManager != null)
             {
                 stageManager.SetMoney(100);
-                stageManager.SetScience(100);
+                stageManager.SetScience(25);
             }
             PolicyManager policyManager = FindObjectOfType<PolicyManager>();
             if (policyManager != null)

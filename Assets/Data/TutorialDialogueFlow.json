@@ -10,7 +10,7 @@
     },
     {
       "id": "intro_002",
-      "text": "{playerName}님은 지금부터 1950년 한국전쟁 직후의 서울을 발전시켜, 세계적인 일류 도시로 만들어 나가게 될 거예요!",
+      "text": "{playerName}님은 지금부터 1953년 한국전쟁 직후 1954년의 서울을 발전시켜, 세계적인 일류 도시로 만들어 나가게 될 거예요!",
       "lockInput": true,
       "onCompleteSetFlag": "intro_002_done",
       "next": "intro_003"
