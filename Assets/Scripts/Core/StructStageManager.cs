@@ -9,7 +9,7 @@ using UnityEngine.UI;
 
 public class StructStageManager : MonoBehaviour
 {
-    private const int InitialYear = 1945;
+    private const int InitialYear = 1950;
     private const string IgnoredStructName = "Stru_CommonSense";
     private const int HouseCapacityMultiplier = 10;
     private const float PopulationCapacityGrowthFactor = 0.01f;
