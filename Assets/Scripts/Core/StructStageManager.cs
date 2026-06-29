@@ -49,12 +49,14 @@ public class StructStageManager : MonoBehaviour
 
     private int currentYear = InitialYear;
     private int money;
+    private int baseConvenience;
     private int convenience;
     private int science;
     private int currentPopulation;
     private int populationCapacity;
     private int populationGrowthPreview;
     private int populationCapacityDeltaPreview;
+    private int baseLove;
     private int love;
     private StatValues pendingValues;
     private Color peopleNormalColor = Color.white;
@@ -193,10 +195,8 @@ private IEnumerator PlayNextYearTransition()
         RefreshPopulationPreview(true);
 
         money += pendingValues.Money;
-        convenience += pendingValues.Convenience;
         science += pendingValues.Science;
         currentPopulation += pendingValues.People;
-        love += pendingValues.Love;
 
         UpdateMainTexts();
         UpdateYearText();
@@ -234,6 +234,18 @@ private IEnumerator PlayNextYearTransition()
     {
         science = Mathf.Max(0, amount);
         UpdateMainTexts();
+        RefreshPendingValues();
+    }
+
+    public void AddConvenience(int amount)
+    {
+        baseConvenience += amount;
+        RefreshPendingValues();
+    }
+
+    public void AddLove(int amount)
+    {
+        baseLove += amount;
         RefreshPendingValues();
     }
 
@@ -376,7 +388,7 @@ private IEnumerator PlayNextYearTransition()
     {
         currentYear = ReadTextNumber(yearText, InitialYear);
         money = ReadTextNumber(moneyTexts.MainText, 0);
-        convenience = ReadTextNumber(convenienceTexts.MainText, 0);
+        baseConvenience = ReadTextNumber(convenienceTexts.MainText, 0);
         science = ReadTextNumber(scienceTexts.MainText, 0);
         populationCapacity = CalculateCurrentPopulationCapacity();
         currentPopulation = ReadPopulationText(peopleTexts.MainText, 0);
@@ -384,7 +396,7 @@ private IEnumerator PlayNextYearTransition()
         {
             currentPopulation = Mathf.FloorToInt(populationCapacity * 0.6f);
         }
-        love = ReadTextNumber(loveTexts.MainText, 0);
+        baseLove = ReadTextNumber(loveTexts.MainText, 0);
 
         UpdateMainTexts();
         UpdateYearText();
@@ -406,11 +418,18 @@ private IEnumerator PlayNextYearTransition()
             populationCapacity = calculatedCapacity;
         }
 
-        pendingValues = CalculateCurrentStructValues();
+        StatValues structureValues = CalculateCurrentStructValues();
+        int overCapacityPenalty = CalculateOverCapacityConveniencePenalty(currentPopulation, calculatedCapacity);
+        convenience = baseConvenience + structureValues.Convenience - overCapacityPenalty;
+        love = baseLove + structureValues.Love;
+
+        pendingValues = structureValues;
+        pendingValues.Convenience = 0;
+        pendingValues.Love = 0;
+        pendingValues = ApplyConvenienceProductionBonus(pendingValues);
         populationGrowthPreview = CalculatePopulationGrowth(convenience, currentPopulation, calculatedCapacity, money, science);
         pendingValues.People = populationGrowthPreview;
         pendingValues.Money += CalculatePopulationMoneyBonus(currentPopulation, calculatedCapacity, science);
-        pendingValues.Convenience -= CalculateOverCapacityConveniencePenalty(currentPopulation, calculatedCapacity);
 
         UpdateMainTexts();
     }
@@ -424,7 +443,6 @@ private IEnumerator PlayNextYearTransition()
         }
 
         AddStructValues(seoulRoot, ref total);
-        total = ApplyConvenienceProductionBonus(total);
         return total;
     }
 
@@ -500,7 +518,6 @@ private IEnumerator PlayNextYearTransition()
         float multiplier = 1f + bonusRate;
         values.Money = Mathf.CeilToInt(values.Money * multiplier);
         values.Science = Mathf.CeilToInt(values.Science * multiplier);
-        values.Love = Mathf.CeilToInt(values.Love * multiplier);
         return values;
     }
 
@@ -609,11 +626,11 @@ private IEnumerator PlayNextYearTransition()
     private void UpdateMainTexts()
     {
         SetText(moneyTexts.MainText, FormatValueWithPending(money, pendingValues.Money));
-        SetText(convenienceTexts.MainText, FormatValueWithPending(convenience, pendingValues.Convenience));
+        SetText(convenienceTexts.MainText, convenience.ToString());
         SetText(scienceTexts.MainText, FormatValueWithPending(science, pendingValues.Science));
         SetText(peopleTexts.MainText, FormatPeopleValue());
         UpdatePeopleTextColor();
-        SetText(loveTexts.MainText, FormatValueWithPending(love, pendingValues.Love));
+        SetText(loveTexts.MainText, love.ToString());
     }
 
     private void UpdateYearText()

@@ -47,28 +47,33 @@ public class TutorialVoiceSettings
 public class VarcoVoiceClient : MonoBehaviour
 {
     private const string ApiUrl = "https://openapi.ai.nc.com/tts/lite/v1/api/synthesize";
+    private const string ApiKeyRelativePath = "LocalSecrets/varco_voice_api_key.txt";
+    private const string VoiceSettingsRelativePath = "Data/TutorialVoiceSettings.json";
     private string apiKey = "";
     private TutorialVoiceSettings settings;
     private string cachePath;
 
     private void Awake()
     {
-        string secretsFolder = Path.Combine(Directory.GetParent(Application.dataPath).FullName, "LocalSecrets");
-        string keyPath = Path.Combine(secretsFolder, "varco_voice_api_key.txt");
+        string keyPath = Path.Combine(Application.streamingAssetsPath, ApiKeyRelativePath);
         if (File.Exists(keyPath))
         {
             apiKey = File.ReadAllText(keyPath).Trim();
         }
         else
         {
-            Debug.LogError("[VarcoVoiceClient] API Key not found! Please enter it via Window > Varco Voice Settings.");
+            Debug.LogError($"[VarcoVoiceClient] API Key not found in StreamingAssets: {keyPath}");
         }
 
-        string settingsPath = Path.Combine(Application.dataPath, "Data/TutorialVoiceSettings.json");
+        string settingsPath = Path.Combine(Application.streamingAssetsPath, VoiceSettingsRelativePath);
         if (File.Exists(settingsPath))
         {
             string json = File.ReadAllText(settingsPath);
             settings = JsonUtility.FromJson<TutorialVoiceSettings>(json);
+        }
+        else
+        {
+            Debug.LogError($"[VarcoVoiceClient] Voice settings not found in StreamingAssets: {settingsPath}");
         }
 
         cachePath = Path.Combine(Application.persistentDataPath, "VoiceCache/Tutorial");

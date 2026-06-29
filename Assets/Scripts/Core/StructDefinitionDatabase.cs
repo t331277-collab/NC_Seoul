@@ -8,10 +8,10 @@ public static class StructDefinitionDatabase
     public static Dictionary<string, StructDefinitionData> Load(string relativePath)
     {
         Dictionary<string, StructDefinitionData> definitions = new Dictionary<string, StructDefinitionData>();
-        string csvPath = Path.Combine(Application.dataPath, relativePath);
+        string csvPath = Path.Combine(Application.streamingAssetsPath, relativePath);
         if (!File.Exists(csvPath))
         {
-            Debug.LogWarning("StructDefinition.csv was not found at " + csvPath + ".");
+            Debug.LogWarning("StructDefinition.csv was not found in StreamingAssets at " + csvPath + ".");
             return definitions;
         }
 

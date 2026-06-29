@@ -23,10 +23,10 @@ public class StructureNarratorVoiceRunner : MonoBehaviour
     private void LoadNarratorScripts(string relativePath)
     {
         structureScriptMap.Clear();
-        string fullPath = Path.Combine(Application.dataPath, relativePath);
+        string fullPath = Path.Combine(Application.streamingAssetsPath, relativePath);
         if (!File.Exists(fullPath))
         {
-            Debug.LogWarning("[StructureNarratorVoiceRunner] Script file not found at: " + fullPath);
+            Debug.LogWarning("[StructureNarratorVoiceRunner] Script file not found in StreamingAssets at: " + fullPath);
             return;
         }
 

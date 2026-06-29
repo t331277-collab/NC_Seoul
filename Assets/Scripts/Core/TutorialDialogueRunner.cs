@@ -58,7 +58,7 @@ public class TutorialDialogueRunner : MonoBehaviour
 
     private void LoadFlow()
     {
-        string path = Path.Combine(Application.dataPath, flowJsonPath);
+        string path = Path.Combine(Application.streamingAssetsPath, flowJsonPath);
         if (File.Exists(path))
         {
             string json = File.ReadAllText(path);
@@ -73,7 +73,7 @@ public class TutorialDialogueRunner : MonoBehaviour
         }
         else
         {
-            Debug.LogError($"TutorialDialogueFlow.json not found at: {path}");
+            Debug.LogError($"TutorialDialogueFlow.json not found in StreamingAssets at: {path}");
         }
     }
 

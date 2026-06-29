@@ -8,10 +8,10 @@ public static class PolicyDefinitionDatabase
     public static Dictionary<string, PolicyDefinitionData> Load(string relativePath)
     {
         Dictionary<string, PolicyDefinitionData> definitions = new Dictionary<string, PolicyDefinitionData>();
-        string csvPath = Path.Combine(Application.dataPath, relativePath);
+        string csvPath = Path.Combine(Application.streamingAssetsPath, relativePath);
         if (!File.Exists(csvPath))
         {
-            Debug.LogWarning("PolicyDefinition.csv was not found at " + csvPath + ".");
+            Debug.LogWarning("PolicyDefinition.csv was not found in StreamingAssets at " + csvPath + ".");
             return definitions;
         }
 

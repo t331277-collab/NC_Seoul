@@ -7,7 +7,9 @@ public class MainSceneTitleIntroController : MonoBehaviour
     [SerializeField] private Transform titlePanel;
     [SerializeField] private CanvasGroup sumCanvasGroup;
     [SerializeField] private CanvasGroup gameStartButtonCanvasGroup;
+    [SerializeField] private CanvasGroup licenseButtonCanvasGroup;
     [SerializeField] private Button gameStartButton;
+    [SerializeField] private Button licenseButton;
     [SerializeField] private AudioClip bgmClip;
     [SerializeField] private AudioSource bgmAudioSource;
 
@@ -18,22 +20,26 @@ public class MainSceneTitleIntroController : MonoBehaviour
 
     private Coroutine sumFadeCoroutine;
     private Coroutine gameStartButtonFadeCoroutine;
+    private Coroutine licenseButtonFadeCoroutine;
 
     private void Start()
     {
         BindSceneObjects();
         InitializeFadeTarget(sumCanvasGroup, false);
         InitializeFadeTarget(gameStartButtonCanvasGroup, true);
+        InitializeFadeTarget(licenseButtonCanvasGroup, true);
         PlayBgm();
 
         sumFadeCoroutine = StartCoroutine(FadeInAfterDelay(sumCanvasGroup, sumDelay, sumFadeDuration, false));
-        gameStartButtonFadeCoroutine = StartCoroutine(FadeInAfterDelay(gameStartButtonCanvasGroup, gameStartButtonDelay, gameStartButtonFadeDuration, true));
+        gameStartButtonFadeCoroutine = StartCoroutine(FadeInAfterDelay(gameStartButtonCanvasGroup, gameStartButtonDelay, gameStartButtonFadeDuration, gameStartButton));
+        licenseButtonFadeCoroutine = StartCoroutine(FadeInAfterDelay(licenseButtonCanvasGroup, gameStartButtonDelay, gameStartButtonFadeDuration, licenseButton));
     }
 
     private void OnDisable()
     {
         StopFadeCoroutine(ref sumFadeCoroutine);
         StopFadeCoroutine(ref gameStartButtonFadeCoroutine);
+        StopFadeCoroutine(ref licenseButtonFadeCoroutine);
     }
 
     private void BindSceneObjects()
@@ -72,6 +78,17 @@ public class MainSceneTitleIntroController : MonoBehaviour
         if (gameStartButton == null && gameStartButtonTransform != null)
         {
             gameStartButton = gameStartButtonTransform.GetComponent<Button>();
+        }
+
+        Transform licenseButtonTransform = titlePanel.Find("LicenseBtn");
+        if (licenseButtonCanvasGroup == null)
+        {
+            licenseButtonCanvasGroup = EnsureCanvasGroup(licenseButtonTransform);
+        }
+
+        if (licenseButton == null && licenseButtonTransform != null)
+        {
+            licenseButton = licenseButtonTransform.GetComponent<Button>();
         }
 
         if (bgmAudioSource == null)
@@ -131,6 +148,11 @@ public class MainSceneTitleIntroController : MonoBehaviour
 
     private IEnumerator FadeInAfterDelay(CanvasGroup canvasGroup, float delay, float duration, bool unlockInteraction)
     {
+        yield return FadeInAfterDelay(canvasGroup, delay, duration, unlockInteraction ? gameStartButton : null);
+    }
+
+    private IEnumerator FadeInAfterDelay(CanvasGroup canvasGroup, float delay, float duration, Button buttonToUnlock)
+    {
         yield return new WaitForSeconds(delay);
 
         if (canvasGroup == null)
@@ -148,14 +170,11 @@ public class MainSceneTitleIntroController : MonoBehaviour
         }
 
         canvasGroup.alpha = 1f;
-        if (unlockInteraction)
+        if (buttonToUnlock != null)
         {
             canvasGroup.interactable = true;
             canvasGroup.blocksRaycasts = true;
-            if (gameStartButton != null)
-            {
-                gameStartButton.interactable = true;
-            }
+            buttonToUnlock.interactable = true;
         }
     }
 
